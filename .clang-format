@@ -1,0 +1,25 @@
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakTemplateDeclarations: MultiLine
+BasedOnStyle: LLVM
+BreakBeforeBraces: Stroustrup
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: false
+ColumnLimit: 120
+FixNamespaceComments: true
+IndentWidth: 4
+IndentPPDirectives: AfterHash
+IndentWrappedFunctionNames: true
+Language: Cpp
+PointerAlignment: Right
+QualifierAlignment: Right
+#QualifierOrder: ['inline', 'static', 'constexpr', 'volatile', 'restrict', 'type', 'const' ]
+ReflowComments: Always
+SortUsingDeclarations: true
+SpaceAfterTemplateKeyword: false
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SortIncludes: CaseInsensitive
+Standard: c++20
