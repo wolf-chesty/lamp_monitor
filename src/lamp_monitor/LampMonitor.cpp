@@ -47,19 +47,19 @@ void LampMonitor::sendButtonStateToPhones(bool const beep)
     cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const action;
     auto const result = io_conn_->invoke(action);
     // Invoke command on all contacts
-    result->forEach(
-        [this, &unique_aors, &pjsip_notify, &lamp_field_monitor](cpp_ami::event::Event const &event) mutable -> bool {
-            auto const &aor = event["EndpointName"];
-            if (!unique_aors.contains(aor) && event["Status"] == "Reachable") {
-                pjsip_notify["Endpoint"] = aor;
-                io_conn_->asyncInvoke(pjsip_notify);
+    result->forEach([this, &unique_aors, &pjsip_notify,
+                     &lamp_field_monitor](cpp_ami::event::Event const &event) mutable -> bool {
+        auto const &aor = event["EndpointName"];
+        if (!unique_aors.contains(aor) && event["Status"] == "Reachable" && !lamp_field_monitor->hasValidState(aor)) {
+            pjsip_notify["Endpoint"] = aor;
+            io_conn_->asyncInvoke(pjsip_notify);
 
-                lamp_field_monitor->addPhone(aor);
+            lamp_field_monitor->addPhone(aor);
 
-                unique_aors.insert(aor);
-            }
-            return false;
-        });
+            unique_aors.insert(aor);
+        }
+        return false;
+    });
 }
 
 std::shared_ptr<LampFieldMonitor> LampMonitor::getLampFieldMonitor()

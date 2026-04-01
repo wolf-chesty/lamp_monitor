@@ -99,3 +99,9 @@ void LampFieldMonitor::addPhone(std::string phone)
     std::lock_guard const lock(desk_phones_mut_);
     desk_phones_.emplace(std::move(phone));
 }
+
+bool LampFieldMonitor::hasValidState(std::string const &phone)
+{
+    std::lock_guard const lock(desk_phones_mut_);
+    return desk_phones_.contains(phone);
+}

@@ -24,6 +24,7 @@ public:
 
     void clearPhoneCache();
     void addPhone(std::string phone);
+    bool hasValidState(std::string const &phone);
 
     static std::string getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep = false);
 
