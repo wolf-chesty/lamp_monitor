@@ -38,10 +38,11 @@ void LampMonitor::sendButtonStateToPhones(bool const beep)
     pjsip_notify.setValues(
         "Variable", {"Event=Yealink-xml", "Content-Type=application/xml", fmt::format("Content={}", button_state_xml)});
 
+    // Clear phone state cache
     auto lamp_field_monitor = getLampFieldMonitor();
+    lamp_field_monitor->clearPhoneCache();
 
     std::unordered_set<std::string> unique_aors;
-
     // Get a list of ContactStatusDetail events
     cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const action;
     auto const result = io_conn_->invoke(action);
