@@ -9,8 +9,8 @@
 #include <cassert>
 #include <fmt/core.h>
 
-LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> ami_conn, uint8_t button_id)
-    : ami_conn_(std::move(ami_conn))
+LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id)
+    : io_conn_(std::move(io_conn))
     , button_id_(button_id)
 {
     assert(button_id_ > 0);
@@ -18,7 +18,7 @@ LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> ami_conn, uint8_t 
 
 std::shared_ptr<cpp_ami::Connection> LampMonitor::getAMIConnection() const
 {
-    return ami_conn_;
+    return io_conn_;
 }
 
 uint8_t LampMonitor::getButtonId() const
@@ -38,19 +38,37 @@ void LampMonitor::sendButtonStateToPhones(bool const beep)
     pjsip_notify.setValues(
         "Variable", {"Event=Yealink-xml", "Content-Type=application/xml", fmt::format("Content={}", button_state_xml)});
 
+    auto lamp_field_monitor = getLampFieldMonitor();
+
     std::unordered_set<std::string> unique_aors;
 
     // Get a list of ContactStatusDetail events
     cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const action;
-    auto const result = ami_conn_->invoke(action);
+    auto const result = io_conn_->invoke(action);
     // Invoke command on all contacts
-    result->forEach([this, &unique_aors, &pjsip_notify](cpp_ami::event::Event const &event) mutable -> bool {
-        auto const &aor = event["EndpointName"];
-        if (!unique_aors.contains(aor) && event["Status"] == "Reachable") {
-            pjsip_notify["Endpoint"] = aor;
-            ami_conn_->asyncInvoke(pjsip_notify);
-            unique_aors.insert(aor);
-        }
-        return false;
-    });
+    result->forEach(
+        [this, &unique_aors, &pjsip_notify, &lamp_field_monitor](cpp_ami::event::Event const &event) mutable -> bool {
+            auto const &aor = event["EndpointName"];
+            if (!unique_aors.contains(aor) && event["Status"] == "Reachable") {
+                pjsip_notify["Endpoint"] = aor;
+                io_conn_->asyncInvoke(pjsip_notify);
+
+                lamp_field_monitor->addPhone(aor);
+
+                unique_aors.insert(aor);
+            }
+            return false;
+        });
+}
+
+std::shared_ptr<LampFieldMonitor> LampMonitor::getLampFieldMonitor()
+{
+    std::lock_guard const lock(lamp_field_monitor_mut_);
+    return lamp_field_monitor_.lock();
+}
+
+void LampMonitor::setLampFieldMonitor(std::weak_ptr<LampFieldMonitor> lamp_field_monitor)
+{
+    std::lock_guard const lock(lamp_field_monitor_mut_);
+    lamp_field_monitor_ = lamp_field_monitor;
 }

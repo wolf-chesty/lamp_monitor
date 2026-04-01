@@ -9,18 +9,18 @@
 #include <iostream>
 #include <sstream>
 
-LampFieldMonitor::LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> ami_conn)
-    : ami_conn_(std::move(ami_conn))
+LampFieldMonitor::LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> io_conn)
+    : io_conn_(std::move(io_conn))
 {
-    assert(ami_conn_);
+    assert(io_conn_);
 
     ami_callback_id_ =
-        ami_conn_->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
+        io_conn_->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
 }
 
 LampFieldMonitor::~LampFieldMonitor()
 {
-    ami_conn_->removeCallback(ami_callback_id_);
+    io_conn_->removeCallback(ami_callback_id_);
 }
 
 void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
@@ -28,7 +28,12 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     static std::unordered_set<std::string> const valid_events{"SuccessfulAuth"};
     if (auto const event_type = event.getValue("Event")) {
         if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
-            publishButtonState(event["AccountID"]);
+            auto const &aor = event["AccountID"];
+            std::lock_guard const lock(desk_phones_mut_);
+            if (!desk_phones_.contains(aor)) {
+                publishButtonState(event["AccountID"]);
+                desk_phones_.emplace(aor);
+            }
         }
     }
 }
@@ -37,6 +42,8 @@ void LampFieldMonitor::addLamp(std::shared_ptr<LampMonitor> const &lamp)
 {
     std::lock_guard const lock(lamps_mut_);
     lamps_.push_back(lamp);
+
+    lamp->setLampFieldMonitor(shared_from_this());
 }
 
 void LampFieldMonitor::publishButtonState(std::string const &aor)
@@ -49,7 +56,7 @@ void LampFieldMonitor::publishButtonState(std::string const &aor)
     pjsip_notify.setValues(
         "Variable", {"Event=Yealink-xml", "Content-Type=application/xml", fmt::format("Content={}", button_state_xml)});
     // Push lamp field state to phone
-    ami_conn_->asyncInvoke(pjsip_notify);
+    io_conn_->asyncInvoke(pjsip_notify);
 }
 
 std::string LampFieldMonitor::getButtonStateXML()
@@ -79,4 +86,16 @@ std::string LampFieldMonitor::getButtonStateXML(std::vector<std::shared_ptr<Lamp
     std::ostringstream doc_str;
     doc.save(doc_str, "", pugi::format_raw);
     return doc_str.str();
+}
+
+void LampFieldMonitor::clearPhoneCache()
+{
+    std::lock_guard const lock(desk_phones_mut_);
+    desk_phones_.clear();
+}
+
+void LampFieldMonitor::addPhone(std::string phone)
+{
+    std::lock_guard const lock(desk_phones_mut_);
+    desk_phones_.emplace(std::move(phone));
 }

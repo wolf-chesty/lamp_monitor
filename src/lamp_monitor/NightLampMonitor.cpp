@@ -10,19 +10,19 @@
 #include <fmt/core.h>
 #include <future>
 
-NightLampMonitor::NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &ami_conn, uint8_t button_id,
+NightLampMonitor::NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                    std::string night_exten, std::string context, std::string device)
-    : LampMonitor(ami_conn, button_id)
+    : LampMonitor(io_conn, button_id)
     , park_exten_(std::move(night_exten))
     , context_(std::move(context))
     , device_(std::move(device))
 {
-    assert(ami_conn);
+    assert(io_conn);
 
     ami_callback_id_ =
-        ami_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
+        io_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
 
-    initLampState(ami_conn);
+    initLampState(io_conn);
 }
 
 NightLampMonitor::~NightLampMonitor()

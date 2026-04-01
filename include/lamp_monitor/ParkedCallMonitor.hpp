@@ -18,7 +18,7 @@ public:
     ParkedCallMonitor() = delete;
     ParkedCallMonitor(ParkedCallMonitor const &) = delete;
     ParkedCallMonitor(ParkedCallMonitor &&) noexcept = delete;
-    explicit ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const &ami_conn, uint8_t button_id,
+    explicit ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                std::string parked_call_info_uri);
     ~ParkedCallMonitor() override;
 

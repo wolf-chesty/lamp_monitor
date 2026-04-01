@@ -10,16 +10,20 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <unordered_set>
 
-class LampFieldMonitor {
+class LampFieldMonitor : public std::enable_shared_from_this<LampFieldMonitor> {
 public:
     LampFieldMonitor() = delete;
     LampFieldMonitor(LampFieldMonitor const &) = delete;
     LampFieldMonitor(LampFieldMonitor &&) = delete;
-    explicit LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> ami_conn);
-    ~LampFieldMonitor();
+    explicit LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> io_conn);
+    virtual ~LampFieldMonitor();
 
     void addLamp(std::shared_ptr<LampMonitor> const &lamp);
+
+    void clearPhoneCache();
+    void addPhone(std::string phone);
 
     static std::string getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep = false);
 
@@ -31,8 +35,10 @@ private:
 
     std::vector<std::shared_ptr<LampMonitor>> lamps_;
     std::mutex lamps_mut_;
-    std::shared_ptr<cpp_ami::Connection> ami_conn_;
+    std::shared_ptr<cpp_ami::Connection> io_conn_;
     cpp_ami::Connection::event_callback_key_t ami_callback_id_;
+    std::mutex desk_phones_mut_;
+    std::unordered_set<std::string> desk_phones_;
 };
 
 #endif

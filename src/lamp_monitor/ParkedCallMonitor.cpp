@@ -10,16 +10,16 @@
 #include <fmt/core.h>
 #include <sstream>
 
-ParkedCallMonitor::ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const &ami_conn, uint8_t button_id,
+ParkedCallMonitor::ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                      std::string parked_call_info_uri)
-    : LampMonitor(ami_conn, button_id)
+    : LampMonitor(io_conn, button_id)
     , parked_call_info_uri_(std::move(parked_call_info_uri))
 {
-    assert(ami_conn);
+    assert(io_conn);
 
     parked_call_callback_id_ =
-        ami_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
-    initLampState(ami_conn);
+        io_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
+    initLampState(io_conn);
 }
 
 ParkedCallMonitor::~ParkedCallMonitor()
@@ -36,14 +36,14 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (auto const event_type = event.getValue("Event")) {
         bool park_event{false};
         if (park_events.contains(event_type.value())) {
-            park_event = true;
             std::string const extension = event["ParkingSpace"];
             parked_extens_.insert(extension);
+            park_event = parked_extens_.size() == 1;
         }
         else if (unpark_events.contains(event_type.value())) {
-            park_event = true;
             std::string const extension = event["ParkingSpace"];
             parked_extens_.erase(extension);
+            park_event = parked_extens_.empty();
         }
 
         if (park_event) {

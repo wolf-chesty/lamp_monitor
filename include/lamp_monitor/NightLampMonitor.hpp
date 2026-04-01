@@ -15,7 +15,7 @@ public:
     NightLampMonitor() = delete;
     NightLampMonitor(NightLampMonitor const &) = delete;
     NightLampMonitor(NightLampMonitor &&) = delete;
-    explicit NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &ami_conn, uint8_t button_id,
+    explicit NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                               std::string night_exten, std::string context, std::string device);
     ~NightLampMonitor() override;
 

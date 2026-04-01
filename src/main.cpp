@@ -27,8 +27,10 @@ std::unique_ptr<httplib::Server> createHttpServer(std::shared_ptr<ParkedCallMoni
                                                   std::shared_ptr<NightLampMonitor> const &night_lamp_monitor,
                                                   std::string const &night_uri);
 
-std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> ami_conn, std::condition_variable &cv,
+std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
                                 std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period);
+
+void serviceThread(ini::IniFile &ini_file, std::shared_ptr<cpp_ami::Connection> const &io_conn);
 
 // Globals =============================================================================================================
 
@@ -44,9 +46,8 @@ int main(int argc, char *argv[])
         parser.parse_args(argc, argv);
     }
     catch (std::runtime_error const &err) {
-        std::cerr << err.what() << std::endl;
-        std::cerr << parser;
-        exit(1);
+        std::cerr << err.what() << '\r' << parser;
+        exit(EXIT_FAILURE);
     }
 
     ini::IniFile ami_ini;
@@ -55,73 +56,36 @@ int main(int argc, char *argv[])
     auto const is_daemon = parser.is_used("--daemon");
     if (is_daemon) {
         if (daemon(0, 0) == -1) {
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 
+    // Create AMI connection
     auto const ami_hostname = ami_ini["ami"]["host"].as<std::string>();
     auto const ami_port = ami_ini["ami"]["port"].as<uint16_t>();
-    auto const ami_username = ami_ini["ami"]["username"].as<std::string>();
-    auto const ami_password = ami_ini["ami"]["secret"].as<std::string>();
-
-    auto const http_addr = ami_ini["http_server"]["addr"].as<std::string>();
-    auto const http_port = ami_ini["http_server"]["port"].as<uint16_t>();
-    auto const http_url = ami_ini["http_server"]["url"].as<std::string>();
-
-    // Create AMI connection
-    auto ami_conn = std::make_shared<cpp_ami::Connection>(ami_hostname, ami_port);
+    auto io_conn = std::make_shared<cpp_ami::Connection>(ami_hostname, ami_port);
 
     // Create AMI Login action
+    auto const ami_username = ami_ini["ami"]["username"].as<std::string>();
+    auto const ami_password = ami_ini["ami"]["secret"].as<std::string>();
     cpp_ami::action::Login login(ami_username, ami_password);
     login["AuthType"] = "plain";
     login["Events"] = "on";
     // Send login to AMI
-    auto reaction = ami_conn->invoke(login);
+    auto reaction = io_conn->invoke(login);
     // Confirm login
     if (!reaction->isSuccess()) {
-        if (is_daemon) {
+        if (!is_daemon) {
             std::cerr << "Unable to login to AMI";
         }
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    // Asterisk will drop AMI connections it hasn't heard from in a while; start an AMI ping thread
-    std::atomic<bool> thread_run_flag{true};
-    std::condition_variable cv;
-    std::thread ami_ping_thread = createAmiPingThread(ami_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
-
-    // Create AMI monitors
-    auto const night_button_id = ami_ini["night_button"]["button_id"].as<unsigned int>();
-    auto const night_exten = ami_ini["night_button"]["exten"].as<std::string>();
-    auto const night_context = ami_ini["night_button"]["context"].as<std::string>();
-    auto const night_device = ami_ini["night_button"]["device"].as<std::string>();
-    auto night_lamp_monitor =
-        std::make_shared<NightLampMonitor>(ami_conn, night_button_id, night_exten, night_context, night_device);
-
-    auto const park_button_id = ami_ini["park_button"]["button_id"].as<unsigned int>();
-    auto const park_info_uri = ami_ini["park_button"]["info_uri"].as<std::string>();
-    auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(ami_conn, park_button_id, http_url + park_info_uri);
-
-    // Create lamp field monitor
-    LampFieldMonitor lamp_field_handler(ami_conn);
-    lamp_field_handler.addLamp(night_lamp_monitor);
-    lamp_field_handler.addLamp(park_lamp_monitor);
-
-    // Start HTTP server
-    auto const night_uri = ami_ini["night_button"]["night_uri"].as<std::string>();
-    auto const park_list_uri = ami_ini["park_button"]["list_uri"].as<std::string>();
-    g_server = createHttpServer(park_lamp_monitor, park_list_uri, park_info_uri, night_lamp_monitor, night_uri);
-    signal(SIGINT, signalHandler);
-    g_server->listen(http_addr, http_port);
-
-    // Stop ping thread
-    thread_run_flag = false;
-    cv.notify_one();
-    ami_ping_thread.join();
+    serviceThread(ami_ini, io_conn);
 
     // Logout of AMI; wait for the response before terminating
     cpp_ami::action::Logoff const logoff;
-    reaction = ami_conn->invoke(logoff);
+    reaction = io_conn->invoke(logoff);
 
     return 0;
 }
@@ -172,12 +136,12 @@ std::unique_ptr<httplib::Server> createHttpServer(std::shared_ptr<ParkedCallMoni
             if (req.has_param("selection")) {
                 res.set_content(parked_call_monitor->getParkedCallDetails(req.get_param_value("selection")),
                                 "text/xml");
+                return;
             }
-            else {
-                static auto const error_xml = ParkedCallMonitor::createMessageXML(
-                    true, 5, "Missing Extension Parameter", "Missing URL parameter '&selection=7xxx'.");
-                res.set_content(error_xml, "text/xml");
-            }
+
+            static auto const error_xml = ParkedCallMonitor::createMessageXML(
+                true, 5, "Missing Extension Parameter", "Missing URL parameter '&selection=7xxx'.");
+            res.set_content(error_xml, "text/xml");
         });
 
     // Lambda to change the night state. Handsets can execute this URI to place/remove the call from night mode.
@@ -201,7 +165,7 @@ std::unique_ptr<httplib::Server> createHttpServer(std::shared_ptr<ParkedCallMoni
 /// The Asterisk Management Interface (AMI) server will periodically cull connections that are believed to be dead. In
 /// order to avoid having the connection to the AMI server closed it is recommended for an application to start a thread
 /// that will periodically send a Ping action to the AMI server. This function creates that thread.
-std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> ami_conn, std::condition_variable &cv,
+std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
                                 std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period)
 {
     std::thread work_thread([&cv, &run_thread_flag, ami_conn, period, ping = cpp_ami::action::Ping()]() -> void {
@@ -222,4 +186,49 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> ami_conn, s
     pthread_setname_np(work_thread.native_handle(), thread_name.data());
 
     return work_thread;
+}
+
+/// @brief Main service thread.
+///
+/// @param ami_ini Configuration file.
+/// @param io_conn Asterisk AMI connection.
+void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn)
+{
+    // Asterisk will drop AMI connections it hasn't heard from in a while; start an AMI ping thread
+    std::atomic<bool> thread_run_flag{true};
+    std::condition_variable cv;
+    std::thread ami_ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
+
+    // Create AMI monitors
+    auto const night_button_id = ami_ini["night_button"]["button_id"].as<unsigned int>();
+    auto const night_exten = ami_ini["night_button"]["exten"].as<std::string>();
+    auto const night_context = ami_ini["night_button"]["context"].as<std::string>();
+    auto const night_device = ami_ini["night_button"]["device"].as<std::string>();
+    auto night_lamp_monitor =
+        std::make_shared<NightLampMonitor>(io_conn, night_button_id, night_exten, night_context, night_device);
+
+    auto const park_button_id = ami_ini["park_button"]["button_id"].as<unsigned int>();
+    auto const park_info_uri = ami_ini["park_button"]["info_uri"].as<std::string>();
+    auto const http_url = ami_ini["http_server"]["url"].as<std::string>();
+    auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id, http_url + park_info_uri);
+
+    // Create lamp field monitor
+    auto lamp_field_handler = std::make_shared<LampFieldMonitor>(io_conn);
+    lamp_field_handler->addLamp(night_lamp_monitor);
+    lamp_field_handler->addLamp(park_lamp_monitor);
+
+    // Start HTTP server
+    auto const night_uri = ami_ini["night_button"]["night_uri"].as<std::string>();
+    auto const park_list_uri = ami_ini["park_button"]["list_uri"].as<std::string>();
+    g_server = createHttpServer(park_lamp_monitor, park_list_uri, park_info_uri, night_lamp_monitor, night_uri);
+    signal(SIGINT, signalHandler);
+    // httplib::Server::listen is a blocking call
+    auto const http_addr = ami_ini["http_server"]["addr"].as<std::string>();
+    auto const http_port = ami_ini["http_server"]["port"].as<uint16_t>();
+    g_server->listen(http_addr, http_port);
+
+    // Stop ping thread
+    thread_run_flag = false;
+    cv.notify_all();
+    ami_ping_thread.join();
 }
