@@ -22,10 +22,10 @@ public:
                                std::string parked_call_info_uri);
     ~ParkedCallMonitor() override;
 
-    static std::string createMessageXML(bool beep, uint8_t timeout, std::string const &title, std::string const &text);
-
     ParkedCallMonitor &operator=(ParkedCallMonitor const &) = delete;
     ParkedCallMonitor &operator=(ParkedCallMonitor &&) noexcept = delete;
+
+    static std::string createMessageXML(bool beep, uint8_t timeout, std::string const &title, std::string const &text);
 
     std::string getParkedCallMenu() const;
     std::string getParkedCallDetails(std::string const &park_exten) const;
@@ -36,11 +36,9 @@ public:
 
 private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
-    void initLampState(std::shared_ptr<cpp_ami::Connection> const &ami_conn);
 
     std::string createParkedCallMenu(cpp_ami::reaction::EventList const &parked_call_list) const;
 
-    static std::string getButtonStateXML(bool button_on, uint8_t button_id, bool beep);
     static std::string createNoParkedCallMessage();
 
     std::string parked_call_info_uri_;                                  ///< URI for parked call info.

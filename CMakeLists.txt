@@ -59,10 +59,11 @@ target_link_libraries(lamp_monitor
 
 target_sources(lamp_monitor
     PRIVATE
-    src/lamp_monitor/NightLampMonitor.cpp
-    src/lamp_monitor/ParkedCallMonitor.cpp
     src/lamp_monitor/LampFieldMonitor.cpp
     src/lamp_monitor/LampMonitor.cpp
+    src/lamp_monitor/NightLampMonitor.cpp
+    src/lamp_monitor/NightLampState.cpp
+    src/lamp_monitor/ParkedCallMonitor.cpp
     src/main.cpp
 )
 

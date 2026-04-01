@@ -3,6 +3,7 @@
 
 #include "lamp_monitor/NightLampMonitor.hpp"
 
+#include "lamp_monitor/LampFieldMonitor.hpp"
 #include <c++ami/action/ExtensionStateList.hpp>
 #include <c++ami/action/PjsipNotify.hpp>
 #include <c++ami/action/Setvar.hpp>
@@ -12,17 +13,19 @@
 
 NightLampMonitor::NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                    std::string night_exten, std::string context, std::string device)
-    : LampMonitor(io_conn, button_id)
+    : NightLampState(io_conn, button_id, false)
     , park_exten_(std::move(night_exten))
     , context_(std::move(context))
     , device_(std::move(device))
 {
     assert(io_conn);
-
     ami_callback_id_ =
         io_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
 
-    initLampState(io_conn);
+    // Asterisk will return a list of ExtensionStatus events upon receiving an ExtensionStateList action. Just have
+    // Asterisk send the list so this objects event handler can take care of the event(s).
+    cpp_ami::action::ExtensionStateList const action;
+    io_conn->asyncInvoke(action);
 }
 
 NightLampMonitor::~NightLampMonitor()
@@ -43,54 +46,34 @@ void NightLampMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     }
 }
 
-void NightLampMonitor::initLampState(std::shared_ptr<cpp_ami::Connection> const &ami_conn)
-{
-    assert(ami_conn);
-
-    // Have Asterisk server send the current lamp state
-    cpp_ami::action::ExtensionStateList const action;
-    ami_conn->asyncInvoke(action);
-}
-
 void NightLampMonitor::updateLampState(std::string_view device_state)
 {
     bool publish_button_state{false};
     if (device_state == "0") {
-        publish_button_state = button_on_.exchange(false);
+        publish_button_state = setButtonState(false);
     }
     else if (device_state == "1") {
-        publish_button_state = !button_on_.exchange(true);
+        publish_button_state = !setButtonState(true);
     }
 
     if (publish_button_state) {
-        sendButtonStateToPhones(button_on_);
+        invalidateButtonState();
     }
 }
 
 std::string NightLampMonitor::resetNightState()
 {
-    // Flip button on for XML generation
-    button_on_ = !button_on_;
+    auto const button_on = !getButtonState();
 
     // Update device state on Asterisk server
     auto const ami_conn = getAMIConnection();
     assert(ami_conn);
     cpp_ami::action::Setvar set_var;
     set_var["Variable"] = fmt::format("DEVICE_STATE({})", device_);
-    set_var["Value"] = button_on_ ? "INUSE" : "NOT_INUSE";
+    set_var["Value"] = button_on ? "INUSE" : "NOT_INUSE";
     ami_conn->asyncInvoke(set_var);
 
     // Return button state XML
-    return getButtonStateXML(true);
-}
-
-bool NightLampMonitor::needsBeep() const
-{
-    return false;
-}
-
-void NightLampMonitor::getButtonState(pugi::xml_node button_state_node) const
-{
-    button_state_node.append_attribute("URI") =
-        fmt::format("Led:LINE{}_RED={}", getButtonId(), button_on_ ? "on" : "off");
+    auto inverted_lamp = std::make_shared<NightLampState>(nullptr, getButtonId(), button_on);
+    return LampFieldMonitor::getButtonStateXML({inverted_lamp}, true);
 }

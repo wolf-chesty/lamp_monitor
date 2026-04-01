@@ -4,6 +4,7 @@
 #include "lamp_monitor/LampFieldMonitor.hpp"
 
 #include <c++ami/action/PjsipNotify.hpp>
+#include <c++ami/action/PjsipShowRegistrationInboundContactStatuses.hpp>
 #include <cassert>
 #include <fmt/core.h>
 #include <iostream>
@@ -13,14 +14,17 @@ LampFieldMonitor::LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> io_conn)
     : io_conn_(std::move(io_conn))
 {
     assert(io_conn_);
-
     ami_callback_id_ =
         io_conn_->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
+
+    startWorkThread();
 }
 
 LampFieldMonitor::~LampFieldMonitor()
 {
     io_conn_->removeCallback(ami_callback_id_);
+
+    stopWorkThread();
 }
 
 void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
@@ -28,12 +32,12 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     static std::unordered_set<std::string> const valid_events{"SuccessfulAuth"};
     if (auto const event_type = event.getValue("Event")) {
         if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
-            auto const &aor = event["AccountID"];
-            std::lock_guard const lock(desk_phones_mut_);
-            if (!desk_phones_.contains(aor)) {
-                publishButtonState(event["AccountID"]);
-                desk_phones_.emplace(aor);
-            }
+            cpp_ami::action::PJSIPNotify action;
+            action["Endpoint"] = event["AccountID"];
+            action.setValues("Variable",
+                             {"Event=Yealink-xml", "Content-Type=application/xml",
+                              fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(getCachedButtonStateXML()))});
+            io_conn_->asyncInvoke(action);
         }
     }
 }
@@ -42,27 +46,15 @@ void LampFieldMonitor::addLamp(std::shared_ptr<LampMonitor> const &lamp)
 {
     std::lock_guard const lock(lamps_mut_);
     lamps_.push_back(lamp);
-
     lamp->setLampFieldMonitor(shared_from_this());
-}
 
-void LampFieldMonitor::publishButtonState(std::string const &aor)
-{
-    // Get escaped button state XML
-    auto const button_state_xml = cpp_ami::util::KeyValDict::escape(getButtonStateXML());
-    // Encode Variable value into an array string for PJSIPNotify AMI action
-    cpp_ami::action::PJSIPNotify pjsip_notify;
-    pjsip_notify["Endpoint"] = aor;
-    pjsip_notify.setValues(
-        "Variable", {"Event=Yealink-xml", "Content-Type=application/xml", fmt::format("Content={}", button_state_xml)});
-    // Push lamp field state to phone
-    io_conn_->asyncInvoke(pjsip_notify);
+    invalidateButtonState();
 }
 
 std::string LampFieldMonitor::getButtonStateXML()
 {
     std::lock_guard const lock(lamps_mut_);
-    return getButtonStateXML(lamps_);
+    return getButtonStateXML(lamps_, false);
 }
 
 std::string LampFieldMonitor::getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep)
@@ -88,20 +80,74 @@ std::string LampFieldMonitor::getButtonStateXML(std::vector<std::shared_ptr<Lamp
     return doc_str.str();
 }
 
-void LampFieldMonitor::clearPhoneCache()
+void LampFieldMonitor::invalidateButtonState()
 {
-    std::lock_guard const lock(desk_phones_mut_);
-    desk_phones_.clear();
+    button_state_valid_ = false;
+    button_state_cv_.notify_one();
 }
 
-void LampFieldMonitor::addPhone(std::string phone)
+void LampFieldMonitor::startWorkThread()
 {
-    std::lock_guard const lock(desk_phones_mut_);
-    desk_phones_.emplace(std::move(phone));
+    button_state_thread_run_ = true;
+    button_state_thread_ = std::thread(&LampFieldMonitor::workThread, this);
+
+    std::string_view thread_name("lamp_field");
+    assert(thread_name.length() <= 16);
+    pthread_setname_np(button_state_thread_.native_handle(), thread_name.data());
 }
 
-bool LampFieldMonitor::hasValidState(std::string const &phone)
+void LampFieldMonitor::stopWorkThread()
 {
-    std::lock_guard const lock(desk_phones_mut_);
-    return desk_phones_.contains(phone);
+    button_state_thread_run_ = false;
+    button_state_cv_.notify_one();
+
+    assert(button_state_thread_.joinable());
+    button_state_thread_.join();
+}
+
+void LampFieldMonitor::workThread()
+{
+    std::mutex button_state_mut_;
+    while (button_state_thread_run_) {
+        std::unique_lock lock(button_state_mut_);
+        button_state_cv_.wait(lock, [this]() -> bool { return !button_state_thread_run_ || !button_state_valid_; });
+        auto const update_needed = !button_state_valid_.exchange(true);
+        lock.unlock();
+
+        if (button_state_thread_run_ && update_needed) {
+            publishButtonState(setCachedButtonStateXML(getButtonStateXML()));
+        }
+    }
+}
+
+void LampFieldMonitor::publishButtonState(std::string const &button_state_xml) const
+{
+    cpp_ami::action::PJSIPNotify notify;
+    notify.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
+                                  fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(button_state_xml))});
+
+    // Get list of ContactStatusDetail events
+    cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const list_action;
+    auto const contact_list = io_conn_->invoke(list_action);
+    // Notify all reachable contacts immediately
+    contact_list->forEach([this, &notify](cpp_ami::event::Event const &event) mutable -> bool {
+        if (event["Status"] == "Reachable") {
+            notify["Endpoint"] = event["EndpointName"];
+            io_conn_->asyncInvoke(notify);
+        }
+        return false;
+    });
+}
+
+std::string const &LampFieldMonitor::setCachedButtonStateXML(std::string button_state_xml)
+{
+    std::lock_guard const lock(button_state_xml_mut_);
+    button_state_xml_ = std::move(button_state_xml);
+    return button_state_xml_;
+}
+
+std::string const &LampFieldMonitor::getCachedButtonStateXML()
+{
+    std::lock_guard const lock(button_state_xml_mut_);
+    return button_state_xml_;
 }

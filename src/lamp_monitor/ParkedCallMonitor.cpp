@@ -16,10 +16,13 @@ ParkedCallMonitor::ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const 
     , parked_call_info_uri_(std::move(parked_call_info_uri))
 {
     assert(io_conn);
-
     parked_call_callback_id_ =
         io_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
-    initLampState(io_conn);
+
+    // Asterisk will return a list of ParkedCall events upon receiving an ParkedCalls action. Just have Asterisk send
+    // the list so this objects event handler can take care of the event(s).
+    cpp_ami::action::ParkedCalls parked_calls;
+    io_conn->asyncInvoke(parked_calls);
 }
 
 ParkedCallMonitor::~ParkedCallMonitor()
@@ -47,19 +50,9 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
         }
 
         if (park_event) {
-            auto const parked_call_count_old = parked_call_count_.exchange(parked_extens_.size());
-            sendButtonStateToPhones(parked_call_count_old == 0 && parked_call_count_ > 0);
+            invalidateButtonState();
         }
     }
-}
-
-void ParkedCallMonitor::initLampState(std::shared_ptr<cpp_ami::Connection> const &ami_conn)
-{
-    // Initialize parked call list and handset lamps; sending a ParkedCalls actions creates a list of ParkedCall events.
-    // Fortunately, the event handler for this class is already set up to handle events of this type so we're going to
-    // let the default handler catch these events.
-    cpp_ami::action::ParkedCalls parked_calls;
-    ami_conn->asyncInvoke(parked_calls);
 }
 
 bool ParkedCallMonitor::needsBeep() const
@@ -71,26 +64,6 @@ void ParkedCallMonitor::getButtonState(pugi::xml_node button_state_node) const
 {
     button_state_node.append_attribute("URI") =
         fmt::format("Led:LINE{}_RED={}", getButtonId(), parked_call_count_ > 0 ? "slowflash" : "off");
-}
-
-std::string ParkedCallMonitor::getButtonStateXML(bool button_on, uint8_t button_id, bool beep)
-{
-    pugi::xml_document doc;
-    auto decl = doc.append_child(pugi::node_declaration);
-    decl.append_attribute("version") = "1.0";
-    decl.append_attribute("encoding") = "ISO-8859-1";
-
-    auto execute_xml = doc.append_child("YealinkIPPhoneExecute");
-    execute_xml.append_attribute("Beep") = beep ? "yes" : "no";
-    execute_xml.append_attribute("refresh") = "1";
-
-    auto execute_item_xml = execute_xml.append_child("ExecuteItem");
-    execute_item_xml.append_attribute("URI") =
-        fmt::format("Led:LINE{}_RED={}", button_id, button_on ? "slowflash" : "off");
-
-    std::ostringstream doc_str;
-    doc.save(doc_str, "", pugi::format_raw);
-    return doc_str.str();
 }
 
 std::string ParkedCallMonitor::getParkedCallMenu() const

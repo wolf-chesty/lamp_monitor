@@ -4,13 +4,13 @@
 #ifndef NIGHT_LAMP_MONITOR_HPP
 #define NIGHT_LAMP_MONITOR_HPP
 
-#include "lamp_monitor/LampMonitor.hpp"
+#include "lamp_monitor/NightLampState.hpp"
 
 #include <atomic>
 #include <c++ami/util/KeyValDict.hpp>
 #include <string>
 
-class NightLampMonitor : public LampMonitor {
+class NightLampMonitor : public NightLampState {
 public:
     NightLampMonitor() = delete;
     NightLampMonitor(NightLampMonitor const &) = delete;
@@ -24,20 +24,14 @@ public:
 
     std::string resetNightState();
 
-    // LampMonitor interface
-    bool needsBeep() const override;
-    void getButtonState(pugi::xml_node button_state_node) const override;
-
 private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
-    void initLampState(std::shared_ptr<cpp_ami::Connection> const &ami_conn);
 
     void updateLampState(std::string_view device_state);
 
     std::string park_exten_;
     std::string context_;
     std::string device_;
-    std::atomic<bool> button_on_{false};
     cpp_ami::Connection::event_callback_key_t ami_callback_id_;
 };
 
