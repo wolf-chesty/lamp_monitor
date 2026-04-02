@@ -41,15 +41,16 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
         if (park_events.contains(event_type.value())) {
             std::string const extension = event["ParkingSpace"];
             parked_extens_.insert(extension);
-            park_event = parked_extens_.size() == 1;
+            park_event = true;
         }
         else if (unpark_events.contains(event_type.value())) {
             std::string const extension = event["ParkingSpace"];
             parked_extens_.erase(extension);
-            park_event = parked_extens_.empty();
+            park_event = true;
         }
 
-        if (park_event) {
+        parked_call_count_ = parked_extens_.size();
+        if (park_event && (parked_call_count_ == 0 || parked_call_count_ == 1)) {
             invalidateButtonState();
         }
     }
@@ -57,7 +58,7 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 
 bool ParkedCallMonitor::needsBeep() const
 {
-    return parked_call_count_ > 0;
+    return false;
 }
 
 void ParkedCallMonitor::getButtonState(pugi::xml_node button_state_node) const

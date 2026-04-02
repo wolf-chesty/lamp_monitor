@@ -32,12 +32,10 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     static std::unordered_set<std::string> const valid_events{"SuccessfulAuth"};
     if (auto const event_type = event.getValue("Event")) {
         if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
-            cpp_ami::action::PJSIPNotify action;
-            action["Endpoint"] = event["AccountID"];
-            action.setValues("Variable",
-                             {"Event=Yealink-xml", "Content-Type=application/xml",
-                              fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(getCachedButtonStateXML()))});
-            io_conn_->asyncInvoke(action);
+            auto const &aor = event["AccountID"];
+            if (aorNeedsUpdate(aor)) {
+                publishButtonState(aor, getCachedButtonStateXML());
+            }
         }
     }
 }
@@ -120,23 +118,39 @@ void LampFieldMonitor::workThread()
     }
 }
 
-void LampFieldMonitor::publishButtonState(std::string const &button_state_xml) const
+void LampFieldMonitor::publishButtonState(std::string const &button_state_xml)
 {
     cpp_ami::action::PJSIPNotify notify;
     notify.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
                                   fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(button_state_xml))});
 
+    clearValidAORs();
+
     // Get list of ContactStatusDetail events
     cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const list_action;
     auto const contact_list = io_conn_->invoke(list_action);
     // Notify all reachable contacts immediately
-    contact_list->forEach([this, &notify](cpp_ami::event::Event const &event) mutable -> bool {
+    std::unordered_set<std::string> unique_aors;
+    contact_list->forEach([this, &notify, &unique_aors](cpp_ami::event::Event const &event) mutable -> bool {
+        std::string const &aor = event["EndpointName"];
+        auto const inserted_aor = unique_aors.insert(aor);
         if (event["Status"] == "Reachable") {
-            notify["Endpoint"] = event["EndpointName"];
-            io_conn_->asyncInvoke(notify);
+            if (inserted_aor.second) {
+                notify["Endpoint"] = aor;
+                io_conn_->asyncInvoke(notify);
+            }
         }
         return false;
     });
+}
+
+void LampFieldMonitor::publishButtonState(std::string const &aor, std::string const &button_state_xml)
+{
+    cpp_ami::action::PJSIPNotify action;
+    action["Endpoint"] = aor;
+    action.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
+                                  fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(button_state_xml))});
+    io_conn_->asyncInvoke(action);
 }
 
 std::string const &LampFieldMonitor::setCachedButtonStateXML(std::string button_state_xml)
@@ -150,4 +164,17 @@ std::string const &LampFieldMonitor::getCachedButtonStateXML()
 {
     std::lock_guard const lock(button_state_xml_mut_);
     return button_state_xml_;
+}
+
+void LampFieldMonitor::clearValidAORs()
+{
+    std::lock_guard const lock(valid_aors_mut_);
+    valid_aors_.clear();
+}
+
+bool LampFieldMonitor::aorNeedsUpdate(std::string const &aor)
+{
+    std::lock_guard const lock(valid_aors_mut_);
+    auto inserted_aor = valid_aors_.insert(aor);
+    return inserted_aor.second;
 }

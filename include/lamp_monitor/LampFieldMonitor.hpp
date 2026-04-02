@@ -35,25 +35,28 @@ private:
     std::string const &setCachedButtonStateXML(std::string button_state_xml);
     std::string const &getCachedButtonStateXML();
 
-    void publishButtonState(std::string const &button_state_xml) const;
+    void publishButtonState(std::string const &aor, std::string const &button_state_xml);
+    void publishButtonState(std::string const &button_state_xml);
 
     void startWorkThread();
     void stopWorkThread();
     void workThread();
 
-    std::shared_ptr<cpp_ami::Connection> io_conn_;
-    cpp_ami::Connection::event_callback_key_t ami_callback_id_;
-
+    std::shared_ptr<cpp_ami::Connection> io_conn_;              ///< Pointer to AMI connection.
+    cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< AMI callback handler ID.
     std::vector<std::shared_ptr<LampMonitor>> lamps_; ///< Collection of objects that monitor phone lamp state.
     std::mutex lamps_mut_;                            ///< Mutex on \c LampMonitor collection.
+    std::thread button_state_thread_;                 ///< Handle to thread that updates the phone states.
+    std::atomic<bool> button_state_thread_run_{};     ///< Flag to stop phone update thread.
+    std::atomic<bool> button_state_valid_{true};      ///< Flag indicating lamp field validity.
+    std::condition_variable button_state_cv_;         ///< Condition variable to trigger phone state update.
+    std::string button_state_xml_;                    ///< Cached lamp field state.
+    std::mutex button_state_xml_mut_;                 ///< Mutex protecting cached lamp field state.
 
-    std::thread button_state_thread_;
-    std::atomic<bool> button_state_thread_run_{};
-    std::atomic<bool> button_state_valid_{true};
-    std::condition_variable button_state_cv_;
-
-    std::mutex button_state_xml_mut_;
-    std::string button_state_xml_;
+    std::unordered_set<std::string> valid_aors_;
+    std::mutex valid_aors_mut_;
+    void clearValidAORs();
+    bool aorNeedsUpdate(std::string const &aor);
 };
 
 #endif
