@@ -21,11 +21,11 @@
 
 void signalHandler(int signum);
 
-std::unique_ptr<httplib::Server> createHttpServer(std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
-                                                  std::string const &park_call_list_uri,
-                                                  std::string const &park_call_info_uri,
-                                                  std::shared_ptr<NightLampMonitor> const &night_lamp_monitor,
-                                                  std::string const &night_uri);
+std::unique_ptr<httplib::Server>
+    createHttpServer(std::shared_ptr<LampFieldMonitor> const &lamp_field_monitor, std::string const &blf_state_uri,
+                     std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
+                     std::string const &park_call_list_uri, std::string const &park_call_info_uri,
+                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri);
 
 std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
                                 std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period);
@@ -105,23 +105,32 @@ void signalHandler(int signum)
 
 /// @brief Creates a new HTTP server with URI endpoints attached to lamp monitor objects.
 ///
-/// @param parked_call_monitor Object that monitors the parked calls on the system.
+/// @param lamp_field_monitor Pointer to object that monitors lamps on deskphones.
+/// @param blf_state_uri HTTP URI to query the current BLF state for the deskphones.
+/// @param parked_call_monitor Pointer to object that monitors the parked calls on the system.
 /// @param park_call_list_uri HTTP URI to query list of parked calls.
 /// @param park_call_info_uri HTTP URI to query parked call details.
-/// @param night_lamp_monitor Object that monitors the night mode of the system.
+/// @param night_lamp_monitor Pointer to object that monitors the night mode of the system.
 /// @param night_uri HTTP URI to disable/enable night mode.
 ///
 /// @return Pointer to an HTTP server.
-std::unique_ptr<httplib::Server> createHttpServer(std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
-                                                  std::string const &park_call_list_uri,
-                                                  std::string const &park_call_info_uri,
-                                                  std::shared_ptr<NightLampMonitor> const &night_lamp_monitor,
-                                                  std::string const &night_uri)
+std::unique_ptr<httplib::Server>
+    createHttpServer(std::shared_ptr<LampFieldMonitor> const &lamp_field_monitor, std::string const &blf_state_uri,
+                     std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
+                     std::string const &park_call_list_uri, std::string const &park_call_info_uri,
+                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri)
 {
     assert(parked_call_monitor);
     assert(night_lamp_monitor);
 
     auto http_server = std::make_unique<httplib::Server>();
+
+    // Retrieve the current BLF button state for the deskphone.
+    http_server->Get(
+        blf_state_uri,
+        [lamp_field_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+            res.set_content(lamp_field_monitor->getCachedButtonStateXML(), "text/xml");
+        });
 
     // Lambda to build and display a list of parked calls on the Asterisk system. Handsets can execute this URI to get a
     // list of parked calls.
@@ -208,19 +217,21 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
         std::make_shared<NightLampMonitor>(io_conn, night_button_id, night_exten, night_context, night_device);
 
     auto const park_button_id = ami_ini["park_button"]["button_id"].as<unsigned int>();
-    auto const park_info_uri = ami_ini["park_button"]["info_uri"].as<std::string>();
     auto const http_url = ami_ini["http_server"]["url"].as<std::string>();
+    auto const park_info_uri = ami_ini["http_server"]["park_info_uri"].as<std::string>();
     auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id, http_url + park_info_uri);
 
     // Create lamp field monitor
-    auto lamp_field_handler = std::make_shared<LampFieldMonitor>(io_conn);
-    lamp_field_handler->addLamp(night_lamp_monitor);
-    lamp_field_handler->addLamp(park_lamp_monitor);
+    auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(io_conn);
+    lamp_field_monitor->addLamp(night_lamp_monitor);
+    lamp_field_monitor->addLamp(park_lamp_monitor);
 
     // Start HTTP server
-    auto const night_uri = ami_ini["night_button"]["night_uri"].as<std::string>();
-    auto const park_list_uri = ami_ini["park_button"]["list_uri"].as<std::string>();
-    g_server = createHttpServer(park_lamp_monitor, park_list_uri, park_info_uri, night_lamp_monitor, night_uri);
+    auto const blf_state_uri = ami_ini["http_server"]["blf_state_uri"].as<std::string>();
+    auto const night_uri = ami_ini["http_server"]["night_uri"].as<std::string>();
+    auto const park_list_uri = ami_ini["http_server"]["park_list_uri"].as<std::string>();
+    g_server = createHttpServer(lamp_field_monitor, blf_state_uri, park_lamp_monitor, park_list_uri, park_info_uri,
+                                night_lamp_monitor, night_uri);
     signal(SIGINT, signalHandler);
     // httplib::Server::listen is a blocking call
     auto const http_addr = ami_ini["http_server"]["addr"].as<std::string>();

@@ -25,6 +25,8 @@ public:
 
     void invalidateButtonState();
 
+    std::string const &getCachedButtonStateXML();
+
     static std::string getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep = false);
 
 private:
@@ -33,7 +35,6 @@ private:
     std::string getButtonStateXML();
 
     std::string const &setCachedButtonStateXML(std::string button_state_xml);
-    std::string const &getCachedButtonStateXML();
 
     void publishButtonState(std::string const &aor, std::string const &button_state_xml);
     void publishButtonState(std::string const &button_state_xml);
