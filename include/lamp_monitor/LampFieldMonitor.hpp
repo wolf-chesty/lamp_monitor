@@ -4,13 +4,15 @@
 #ifndef LAMP_FIELD_MONITOR_HPP
 #define LAMP_FIELD_MONITOR_HPP
 
+#include "lamp_monitor/HandsetCache.hpp"
+#include "lamp_monitor/LampFieldState.hpp"
 #include "lamp_monitor/LampMonitor.hpp"
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-#include <unordered_set>
+#include <list>
 #include <vector>
 
 class LampFieldMonitor : public std::enable_shared_from_this<LampFieldMonitor> {
@@ -21,24 +23,29 @@ public:
     explicit LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> io_conn);
     virtual ~LampFieldMonitor();
 
+    LampFieldMonitor &operator=(LampFieldMonitor const &) = delete;
+    LampFieldMonitor &operator=(LampFieldMonitor &&) = delete;
+
     void addLamp(std::shared_ptr<LampMonitor> const &lamp);
+    void addLamps(std::list<std::shared_ptr<LampMonitor>> const &lamps);
 
     void invalidateButtonState();
 
-    std::string const &getCachedButtonStateXML();
+    std::shared_ptr<LampFieldState> getCachedButtonState();
 
-    static std::string getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep = false);
+    static std::shared_ptr<LampFieldState> getButtonState(std::vector<std::shared_ptr<LampMonitor>> const &lamps,
+                                                          bool beep = false);
 
     void invalidateAOR(std::string const &aor);
 
 private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
-    std::string getButtonStateXML();
+    std::shared_ptr<LampFieldState> getButtonState();
 
-    std::string const &setCachedButtonStateXML(std::string button_state_xml);
+    std::shared_ptr<LampFieldState> cacheButtonState(std::shared_ptr<LampFieldState> state);
 
-    void publishButtonState(std::string const &aor, std::string const &button_state_xml);
+    void publishButtonState(std::string const &aor, std::string const &button_state_xml) const;
     void publishButtonState(std::string const &button_state_xml);
 
     void startWorkThread();
@@ -53,13 +60,9 @@ private:
     std::atomic<bool> button_state_thread_run_{};     ///< Flag to stop phone update thread.
     std::atomic<bool> button_state_valid_{true};      ///< Flag indicating lamp field validity.
     std::condition_variable button_state_cv_;         ///< Condition variable to trigger phone state update.
-    std::string button_state_xml_;                    ///< Cached lamp field state.
-    std::mutex button_state_xml_mut_;                 ///< Mutex protecting cached lamp field state.
-
-    std::unordered_set<std::string> valid_aors_;
-    std::mutex valid_aors_mut_;
-    void clearValidAORs();
-    bool aorNeedsUpdate(std::string const &aor);
+    HandsetCache handset_cache_;                      ///< Cache of active handsets on the system.
+    std::shared_ptr<LampFieldState> cached_state_;    ///< Cached lamp field state.
+    std::mutex cached_state_mut_;                     ///< Mutex protecting cached lamp field state.
 };
 
 #endif

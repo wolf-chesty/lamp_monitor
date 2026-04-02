@@ -7,9 +7,10 @@
 #include <cassert>
 #include <fmt/core.h>
 
-LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id)
+LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on)
     : io_conn_(std::move(io_conn))
     , button_id_(button_id)
+    , button_on_(button_on)
 {
 }
 
@@ -21,6 +22,20 @@ std::shared_ptr<cpp_ami::Connection> LampMonitor::getAMIConnection() const
 uint8_t LampMonitor::getButtonId() const
 {
     return button_id_;
+}
+
+bool LampMonitor::getButtonOn() const
+{
+    return button_on_.load();
+}
+
+bool LampMonitor::setButtonOn(bool button_on)
+{
+    auto const prev_state = button_on_.exchange(button_on);
+    if (prev_state != button_on) {
+        invalidateButtonState();
+    }
+    return prev_state;
 }
 
 void LampMonitor::invalidateButtonState()

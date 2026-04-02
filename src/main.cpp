@@ -14,7 +14,6 @@
 #include <httplib.h>
 #include <inicpp.h>
 #include <memory>
-#include <pugixml.hpp>
 #include <unistd.h>
 
 // Function declarations ===============================================================================================
@@ -127,12 +126,21 @@ std::unique_ptr<httplib::Server>
 
     // Retrieve the current BLF button state for the deskphone.
     http_server->Get(blf_state_uri, [lamp_field_monitor](httplib::Request const &req, httplib::Response &res) -> void {
-        res.set_content(lamp_field_monitor->getCachedButtonStateXML(), "text/xml");
+        // Publish current lamp field button state
+        auto const state = lamp_field_monitor->getCachedButtonState();
+        res.set_content(state->getXMLString(), "text/xml");
 
+        // Remove requesting deskphone from cache
         if (req.has_param("aor")) {
             lamp_field_monitor->invalidateAOR(req.get_param_value("aor"));
         }
     });
+
+    // Lambda to change the night state. Handsets can execute this URI to place/remove the call from night mode.
+    http_server->Get(
+        night_uri, [night_lamp_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+            res.set_content(night_lamp_monitor->resetNightState(), "text/xml");
+        });
 
     // Lambda to build and display a list of parked calls on the Asterisk system. Handsets can execute this URI to get a
     // list of parked calls.
@@ -142,6 +150,7 @@ std::unique_ptr<httplib::Server>
             res.set_content(parked_call_monitor->getParkedCallMenu(), "text/xml");
         });
 
+    // Lambda to display the properties of a parked call.
     http_server->Get(
         park_call_info_uri, [parked_call_monitor](httplib::Request const &req, httplib::Response &res) -> void {
             if (req.has_param("selection")) {
@@ -153,12 +162,6 @@ std::unique_ptr<httplib::Server>
             static auto const error_xml = ParkedCallMonitor::createMessageXML(
                 true, 5, "Missing Extension Parameter", "Missing URL parameter '&selection=7xxx'.");
             res.set_content(error_xml, "text/xml");
-        });
-
-    // Lambda to change the night state. Handsets can execute this URI to place/remove the call from night mode.
-    http_server->Get(
-        night_uri, [night_lamp_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-            res.set_content(night_lamp_monitor->resetNightState(), "text/xml");
         });
 
     return http_server;
@@ -210,14 +213,14 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
     std::condition_variable cv;
     std::thread ami_ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
 
-    // Create AMI monitors
+    // Create monitor for the night button
     auto const night_button_id = ami_ini["night_button"]["button_id"].as<unsigned int>();
     auto const night_exten = ami_ini["night_button"]["exten"].as<std::string>();
     auto const night_context = ami_ini["night_button"]["context"].as<std::string>();
     auto const night_device = ami_ini["night_button"]["device"].as<std::string>();
     auto night_lamp_monitor =
         std::make_shared<NightLampMonitor>(io_conn, night_button_id, night_exten, night_context, night_device);
-
+    // Create monitor for the parking button
     auto const park_button_id = ami_ini["park_button"]["button_id"].as<unsigned int>();
     auto const http_url = ami_ini["http_server"]["url"].as<std::string>();
     auto const park_info_uri = ami_ini["http_server"]["park_info_uri"].as<std::string>();
@@ -225,8 +228,7 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
 
     // Create lamp field monitor
     auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(io_conn);
-    lamp_field_monitor->addLamp(night_lamp_monitor);
-    lamp_field_monitor->addLamp(park_lamp_monitor);
+    lamp_field_monitor->addLamps({night_lamp_monitor, park_lamp_monitor});
 
     // Start HTTP server
     auto const blf_state_uri = ami_ini["http_server"]["blf_state_uri"].as<std::string>();

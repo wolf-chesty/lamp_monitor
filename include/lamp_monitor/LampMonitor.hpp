@@ -16,14 +16,20 @@ class LampFieldMonitor;
 /// @brief Base class for objects that manage button lamps on the phone.
 class LampMonitor : public std::enable_shared_from_this<LampMonitor> {
 public:
-    LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id);
-    LampMonitor(LampMonitor const &) = default;
-    LampMonitor(LampMonitor &&) = default;
+    LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on = false);
+    LampMonitor(LampMonitor const &) = delete;
+    LampMonitor(LampMonitor &&) noexcept = delete;
     virtual ~LampMonitor() = default;
+
+    LampMonitor &operator=(LampMonitor const &) = delete;
+    LampMonitor &operator=(LampMonitor &&) noexcept = delete;
 
     void setLampFieldMonitor(std::weak_ptr<LampFieldMonitor> const &lamp_field_monitor);
 
     uint8_t getButtonId() const;
+
+    bool getButtonOn() const;
+    bool setButtonOn(bool button_on);
 
     virtual bool needsBeep() const = 0;
     virtual void getButtonState(pugi::xml_node button_state_node) const = 0;
@@ -40,6 +46,7 @@ private:
     std::mutex lamp_field_monitor_mut_;                  ///< Controlling mutex for \c LampFieldMonitor pointer.
     std::shared_ptr<cpp_ami::Connection> io_conn_;       ///< AMI connection for input/output.
     uint8_t button_id_;                                  ///< ID for this lamp.
+    std::atomic<bool> button_on_{false};                 ///< Button state.
 };
 
 #endif

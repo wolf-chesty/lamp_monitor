@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/LampMonitor.hpp"
-
 #ifndef NIGHT_LAMP_STATE_HPP
 #define NIGHT_LAMP_STATE_HPP
+
+#include "lamp_monitor/LampMonitor.hpp"
 
 class NightLampState : public LampMonitor {
 public:
@@ -19,13 +19,6 @@ public:
     // LampMonitor interface
     bool needsBeep() const override;
     void getButtonState(pugi::xml_node button_state_node) const override;
-
-protected:
-    bool getButtonState();
-    bool setButtonState(bool button_on);
-
-private:
-    std::atomic<bool> button_on_{false};
 };
 
 #endif

@@ -59,7 +59,9 @@ target_link_libraries(lamp_monitor
 
 target_sources(lamp_monitor
     PRIVATE
+    src/lamp_monitor/HandsetCache.cpp
     src/lamp_monitor/LampFieldMonitor.cpp
+    src/lamp_monitor/LampFieldState.cpp
     src/lamp_monitor/LampMonitor.cpp
     src/lamp_monitor/NightLampMonitor.cpp
     src/lamp_monitor/NightLampState.cpp

@@ -49,8 +49,8 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
         }
 
         parked_call_count_ = parked_extens_.size();
-        if (park_event && (parked_call_count_ == 0 || parked_call_count_ == 1)) {
-            invalidateButtonState();
+        if (park_event) {
+            setButtonOn(parked_call_count_ > 1);
         }
     }
 }

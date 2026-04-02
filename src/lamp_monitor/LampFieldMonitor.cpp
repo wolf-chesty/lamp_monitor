@@ -33,8 +33,9 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (auto const event_type = event.getValue("Event")) {
         if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
             auto const &aor = event["AccountID"];
-            if (aorNeedsUpdate(aor)) {
-                publishButtonState(aor, getCachedButtonStateXML());
+            auto const state = getCachedButtonState();
+            if (handset_cache_.aorNeedsUpdate(aor) || state->forceUpdate()) {
+                publishButtonState(aor, state->getXMLString());
             }
         }
     }
@@ -49,13 +50,25 @@ void LampFieldMonitor::addLamp(std::shared_ptr<LampMonitor> const &lamp)
     invalidateButtonState();
 }
 
-std::string LampFieldMonitor::getButtonStateXML()
+void LampFieldMonitor::addLamps(std::list<std::shared_ptr<LampMonitor>> const &lamps)
 {
     std::lock_guard const lock(lamps_mut_);
-    return getButtonStateXML(lamps_, false);
+    for (auto const lamp : lamps) {
+        lamps_.push_back(lamp);
+        lamp->setLampFieldMonitor(shared_from_this());
+    }
+
+    invalidateButtonState();
 }
 
-std::string LampFieldMonitor::getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep)
+std::shared_ptr<LampFieldState> LampFieldMonitor::getButtonState()
+{
+    std::lock_guard const lock(lamps_mut_);
+    return getButtonState(lamps_, false);
+}
+
+std::shared_ptr<LampFieldState> LampFieldMonitor::getButtonState(std::vector<std::shared_ptr<LampMonitor>> const &lamps,
+                                                                 bool beep)
 {
     assert(!lamps.empty());
 
@@ -73,9 +86,7 @@ std::string LampFieldMonitor::getButtonStateXML(std::vector<std::shared_ptr<Lamp
     }
     execute_xml.append_attribute("Beep") = beep ? "yes" : "no";
 
-    std::ostringstream doc_str;
-    doc.save(doc_str, "", pugi::format_raw);
-    return doc_str.str();
+    return std::make_shared<LampFieldState>(std::move(doc), beep);
 }
 
 void LampFieldMonitor::invalidateButtonState()
@@ -112,8 +123,9 @@ void LampFieldMonitor::workThread()
         auto const update_needed = !button_state_valid_.exchange(true);
         lock.unlock();
 
-        if (button_state_thread_run_ && update_needed) {
-            publishButtonState(setCachedButtonStateXML(getButtonStateXML()));
+        if (update_needed && button_state_thread_run_) {
+            auto const state = cacheButtonState(getButtonState());
+            publishButtonState(state->getXMLString());
         }
     }
 }
@@ -124,7 +136,7 @@ void LampFieldMonitor::publishButtonState(std::string const &button_state_xml)
     notify.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
                                   fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(button_state_xml))});
 
-    clearValidAORs();
+    handset_cache_.clearValidAORs();
 
     // Get list of ContactStatusDetail events
     cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const list_action;
@@ -144,7 +156,7 @@ void LampFieldMonitor::publishButtonState(std::string const &button_state_xml)
     });
 }
 
-void LampFieldMonitor::publishButtonState(std::string const &aor, std::string const &button_state_xml)
+void LampFieldMonitor::publishButtonState(std::string const &aor, std::string const &button_state_xml) const
 {
     cpp_ami::action::PJSIPNotify action;
     action["Endpoint"] = aor;
@@ -153,34 +165,21 @@ void LampFieldMonitor::publishButtonState(std::string const &aor, std::string co
     io_conn_->asyncInvoke(action);
 }
 
-std::string const &LampFieldMonitor::setCachedButtonStateXML(std::string button_state_xml)
+std::shared_ptr<LampFieldState> LampFieldMonitor::cacheButtonState(std::shared_ptr<LampFieldState> state)
 {
-    std::lock_guard const lock(button_state_xml_mut_);
-    button_state_xml_ = std::move(button_state_xml);
-    return button_state_xml_;
+    // Cache the XML string
+    std::lock_guard const lock(cached_state_mut_);
+    cached_state_ = state;
+    return cached_state_;
 }
 
-std::string const &LampFieldMonitor::getCachedButtonStateXML()
+std::shared_ptr<LampFieldState> LampFieldMonitor::getCachedButtonState()
 {
-    std::lock_guard const lock(button_state_xml_mut_);
-    return button_state_xml_;
-}
-
-void LampFieldMonitor::clearValidAORs()
-{
-    std::lock_guard const lock(valid_aors_mut_);
-    valid_aors_.clear();
-}
-
-bool LampFieldMonitor::aorNeedsUpdate(std::string const &aor)
-{
-    std::lock_guard const lock(valid_aors_mut_);
-    auto inserted_aor = valid_aors_.insert(aor);
-    return inserted_aor.second;
+    std::lock_guard const lock(cached_state_mut_);
+    return cached_state_;
 }
 
 void LampFieldMonitor::invalidateAOR(std::string const &aor)
 {
-    std::lock_guard const lock(valid_aors_mut_);
-    valid_aors_.erase(aor);
+    handset_cache_.invalidateAOR(aor);
 }

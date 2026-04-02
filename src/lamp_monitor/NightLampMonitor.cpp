@@ -10,6 +10,7 @@
 #include <cassert>
 #include <fmt/core.h>
 #include <future>
+#include <sstream>
 
 NightLampMonitor::NightLampMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                    std::string night_exten, std::string context, std::string device)
@@ -48,22 +49,17 @@ void NightLampMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 
 void NightLampMonitor::updateLampState(std::string_view device_state)
 {
-    bool publish_button_state{false};
     if (device_state == "0") {
-        publish_button_state = setButtonState(false);
+        setButtonOn(false);
     }
     else if (device_state == "1") {
-        publish_button_state = !setButtonState(true);
-    }
-
-    if (publish_button_state) {
-        invalidateButtonState();
+        setButtonOn(true);
     }
 }
 
 std::string NightLampMonitor::resetNightState()
 {
-    auto const button_on = !getButtonState();
+    auto const button_on = !getButtonOn();
 
     // Update device state on Asterisk server
     auto const ami_conn = getAMIConnection();
@@ -74,6 +70,10 @@ std::string NightLampMonitor::resetNightState()
     ami_conn->asyncInvoke(set_var);
 
     // Return button state XML
-    auto inverted_lamp = std::make_shared<NightLampState>(nullptr, getButtonId(), button_on);
-    return LampFieldMonitor::getButtonStateXML({inverted_lamp}, true);
+    auto const inverted_lamp = std::make_shared<NightLampState>(nullptr, getButtonId(), button_on);
+    auto const state = LampFieldMonitor::getButtonState({inverted_lamp}, true);
+    // Convert to XML string
+    std::ostringstream doc_str;
+    state->getXML().save(doc_str, "", pugi::format_raw);
+    return doc_str.str();
 }

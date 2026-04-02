@@ -12,7 +12,10 @@
 
 /// @class ParkedCallMonitor
 ///
-/// @brief Monitors the parked calls of the Asterisk system and creates a parking list for the phone UI.
+/// @brief Monitors parked calls on the Asterisk system and creates a parking list for the phone UI.
+///
+/// This object will monitor the Asterisk server for parked calls and update the parking lamp on the deskphones. The
+/// object can also create deskphone interactive XML browser menus to list parked calls and their details.
 class ParkedCallMonitor : public LampMonitor {
 public:
     ParkedCallMonitor() = delete;
