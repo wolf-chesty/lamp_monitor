@@ -29,6 +29,8 @@ public:
 
     static std::string getButtonStateXML(std::vector<std::shared_ptr<LampMonitor>> const &lamps, bool beep = false);
 
+    void invalidateAOR(std::string const &aor);
+
 private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 

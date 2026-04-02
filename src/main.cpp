@@ -126,11 +126,13 @@ std::unique_ptr<httplib::Server>
     auto http_server = std::make_unique<httplib::Server>();
 
     // Retrieve the current BLF button state for the deskphone.
-    http_server->Get(
-        blf_state_uri,
-        [lamp_field_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-            res.set_content(lamp_field_monitor->getCachedButtonStateXML(), "text/xml");
-        });
+    http_server->Get(blf_state_uri, [lamp_field_monitor](httplib::Request const &req, httplib::Response &res) -> void {
+        res.set_content(lamp_field_monitor->getCachedButtonStateXML(), "text/xml");
+
+        if (req.has_param("aor")) {
+            lamp_field_monitor->invalidateAOR(req.get_param_value("aor"));
+        }
+    });
 
     // Lambda to build and display a list of parked calls on the Asterisk system. Handsets can execute this URI to get a
     // list of parked calls.

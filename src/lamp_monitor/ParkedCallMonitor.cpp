@@ -39,7 +39,7 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
         bool park_event{false};
         if (park_events.contains(event_type.value())) {
             std::string const extension = event["ParkingSpace"];
-            parked_extens_.insert(extension);
+            parked_extens_.emplace(extension);
             park_event = true;
         }
         else if (unpark_events.contains(event_type.value())) {

@@ -178,3 +178,9 @@ bool LampFieldMonitor::aorNeedsUpdate(std::string const &aor)
     auto inserted_aor = valid_aors_.insert(aor);
     return inserted_aor.second;
 }
+
+void LampFieldMonitor::invalidateAOR(std::string const &aor)
+{
+    std::lock_guard const lock(valid_aors_mut_);
+    valid_aors_.erase(aor);
+}
