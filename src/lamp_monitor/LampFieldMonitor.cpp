@@ -133,8 +133,8 @@ void LampFieldMonitor::publishButtonState(std::string const &button_state_xml)
     std::unordered_set<std::string> unique_aors;
     contact_list->forEach([this, &notify, &unique_aors](cpp_ami::event::Event const &event) mutable -> bool {
         std::string const &aor = event["EndpointName"];
-        auto const inserted_aor = unique_aors.insert(aor);
         if (event["Status"] == "Reachable") {
+            auto const inserted_aor = unique_aors.insert(aor);
             if (inserted_aor.second) {
                 notify["Endpoint"] = aor;
                 io_conn_->asyncInvoke(notify);

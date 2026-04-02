@@ -4,7 +4,6 @@
 #include "lamp_monitor/ParkedCallMonitor.hpp"
 
 #include <c++ami/action/ParkedCalls.hpp>
-#include <c++ami/action/PjsipNotify.hpp>
 #include <c++ami/reaction/EventList.hpp>
 #include <cassert>
 #include <fmt/core.h>
@@ -58,7 +57,7 @@ void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 
 bool ParkedCallMonitor::needsBeep() const
 {
-    return false;
+    return parked_call_count_ > 0;
 }
 
 void ParkedCallMonitor::getButtonState(pugi::xml_node button_state_node) const
