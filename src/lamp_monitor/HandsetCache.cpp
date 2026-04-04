@@ -3,13 +3,12 @@
 
 #include "lamp_monitor/HandsetCache.hpp"
 
+#include <charconv>
 #include <ranges>
 
-HandsetCache::HandsetCache(std::string_view filename, std::chrono::milliseconds expiry,
-                           std::chrono::seconds flush_period)
+HandsetCache::HandsetCache(std::string_view filename, std::chrono::milliseconds expiry)
     : connection_pool_(filename)
     , expiry_(expiry)
-    , flush_period_(flush_period)
 {
     initializeDatabase();
     startWorkThread();
@@ -18,6 +17,21 @@ HandsetCache::HandsetCache(std::string_view filename, std::chrono::milliseconds 
 HandsetCache::~HandsetCache()
 {
     stopWorkThread();
+
+    auto connection = connection_pool_.getConnection();
+
+    // Expunge expired endpoints
+    auto expunge = connection.getStmt("DELETE FROM endpoints WHERE expiry < ?;");
+    auto const now = clock_t::now();
+    expunge.bindInt64(1, now.time_since_epoch().count());
+    auto ret = expunge.execute();
+    assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
+
+    // Truncate the database file
+    auto checkpoint = connection.getStmt("PRAGMA wall_checkpoint(TRUNCATE);");
+    ret = checkpoint.execute();
+    assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
+
 }
 
 void HandsetCache::initializeDatabase()
@@ -27,41 +41,34 @@ void HandsetCache::initializeDatabase()
     auto connection = connection_pool_.getConnection();
     connection.exec("CREATE TABLE IF NOT EXISTS endpoints ("
                     "aor TEXT NOT NULL,"
+                    " endpoint TEXT NOT NULL,"
+                    " ip_ver TEXT,"
+                    " trans TEXT,"
                     " ip TEXT NOT NULL,"
+                    " port INT,"
                     " expiry INT64,"
-                    " PRIMARY KEY(aor, ip));");
+                    " PRIMARY KEY(aor, endpoint));");
 
     connection.exec("UPDATE endpoints SET expiry = 0;");
 }
 
-bool HandsetCache::addEndpoint(std::string const &aor, std::string const &ip)
+bool HandsetCache::addEndpoint(std::string const &aor, std::string const &endpoint)
 {
     // Query table for unexpired handset
     auto connection = connection_pool_.getConnection();
-    auto check = connection.getStmt("SELECT EXISTS(SELECT 1 FROM endpoints WHERE aor = ? AND ip = ? AND expiry > ?);");
+    auto check =
+        connection.getStmt("SELECT EXISTS(SELECT 1 FROM endpoints WHERE aor = ? AND endpoint = ? AND expiry > ?);");
     check.bindText(1, aor);
-
-    auto const fields = ip | std::views::split('/') | std::views::transform([](auto &&r) {
-                            return std::string_view(&*r.begin(), std::ranges::distance(r));
-                        });
-    // Pull IP out of the field
-    int i = 0;
-    for (auto const field : fields) {
-        if (i++ == 2) {
-            check.bindText(2, field);
-            break;
-        }
-    }
-
+    check.bindText(2, endpoint);
     auto const now = clock_t::now();
     check.bindInt64(3, now.time_since_epoch().count());
-    auto ret = check.execute();
+    auto const ret = check.execute();
     assert(ret == dbpool::PreparedStmt::ReturnCode::Row);
     auto const found_rec{check.getBool(0)};
 
     // Enqueue the endpoint for add
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::insert, aor, ip, (now + expiry_).time_since_epoch().count());
+    batch_.emplace_back(SQLAction::insert, aor, endpoint, (now + expiry_).time_since_epoch().count());
     batch_write_cv_.notify_one();
 
     return !found_rec;
@@ -109,78 +116,79 @@ void HandsetCache::workThread()
     auto connection = connection_pool_.getConnection();
     auto begin = connection.getStmt("BEGIN;");
     auto del_aor = connection.getStmt("UPDATE endpoints SET expiry = 0 WHERE aor = ? AND ip = ?;");
-    auto add_aor = connection.getStmt("INSERT INTO endpoints (aor, ip, expiry) VALUES (?, ?, ?)"
-                                      " ON CONFLICT(aor, ip) DO UPDATE SET expiry = excluded.expiry;");
-    auto expunge = connection.getStmt("DELETE FROM endpoints WHERE expiry < ?;");
+    auto add_aor = connection.getStmt(
+        "INSERT INTO endpoints (aor, endpoint, expiry, ip_ver, trans, ip, port)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT(aor, endpoint)"
+        " DO UPDATE SET expiry = excluded.expiry, ip_ver = excluded.ip_ver, trans = excluded.trans, ip = excluded.ip, port = excluded.port;");
     auto commit = connection.getStmt("COMMIT;");
-    auto checkpoint = connection.getStmt("PRAGMA wall_checkpoint(TRUNCATE);");
 
-    flush_time_ = clock_t::now() + flush_period_;
+    // Lambda to bind encoded fields to record
+    auto bind_fields = [](dbpool::PreparedStmt &add_aor, int idx, std::string const &endpoint) -> void {
+        // Split the IP into its separate fields
+        auto const fields = endpoint | std::views::split('/') | std::views::transform([](auto &&r) {
+                                return std::string_view(&*r.begin(), std::ranges::distance(r));
+                            });
 
+        // Bind fields
+        for (auto const field : fields) {
+            if (idx != 7) {
+                add_aor.bindText(idx, field);
+            }
+            else {
+                int port{};
+                auto const result = std::from_chars(field.begin(), field.end(), port);
+                if (result.ec == std::errc{}) {
+                    add_aor.bindInt32(idx, port);
+                }
+                else {
+                    add_aor.bindNull(idx);
+                }
+            }
+            ++idx;
+        }
+    };
+
+    // Working batch
     std::vector<HandsetData> batch;
 
+    // Service loop
     while (batch_write_run_) {
         std::unique_lock lock(batch_mut_);
         batch_write_cv_.wait(lock, [this]() -> bool { return !batch_write_run_ || !batch_.empty(); });
         std::swap(batch_, batch);
         lock.unlock();
 
-        // Begin transaction
+        // Begin transaction(s)
         auto ret = begin.execute();
         assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
         begin.reset();
 
+        // Add/remove record(s) from database
         for (auto const &data : batch) {
-            if (data.action == SQLAction::remove) {
-                del_aor.bindText(1, data.aor);
-                del_aor.bindText(2, data.ip);
-                ret = del_aor.execute();
-                assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
-                del_aor.reset();
-            }
-            else {
+            if (data.action == SQLAction::insert) {
                 add_aor.bindText(1, data.aor);
-
-                // Split the IP into its separate fields
-                auto const fields = data.ip | std::views::split('/') | std::views::transform([](auto &&r) {
-                                        return std::string_view(&*r.begin(), std::ranges::distance(r));
-                                    });
-                // Pull IP out of the field
-                int i = 0;
-                for (auto const field : fields) {
-                    if (i++ == 2) {
-                        add_aor.bindText(2, field);
-                        break;
-                    }
-                }
-
+                add_aor.bindText(2, data.endpoint);
                 add_aor.bindInt64(3, data.expiry);
-
+                bind_fields(add_aor, 4, data.endpoint);
                 ret = add_aor.execute();
                 assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
                 add_aor.reset();
             }
+            else {
+                del_aor.bindText(1, data.aor);
+                del_aor.bindText(2, data.endpoint);
+                ret = del_aor.execute();
+                assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
+                del_aor.reset();
+            }
         }
-        batch.clear();
 
-        // Expunge expired endpoints
-        auto const now = clock_t::now();
-        expunge.bindInt64(1, now.time_since_epoch().count());
-        ret = expunge.execute();
-        assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
-        expunge.reset();
-
-        // Commit the transactions
+        // Commit transaction(s)
         ret = commit.execute();
         assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
         commit.reset();
 
-        if (now > flush_time_) {
-            ret = checkpoint.execute();
-            assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
-            checkpoint.reset();
-
-            flush_time_ = now + flush_period_;
-        }
+        batch.clear();
     }
 }

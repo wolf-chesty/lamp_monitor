@@ -36,18 +36,25 @@ LampFieldMonitor::~LampFieldMonitor()
 /// Upon successful registration of a deskphone this callback will publish the current lamp states to the phone.
 void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 {
+    // Filtered monitored events
+    auto const event_type = event.getValue("Event");
+    if (!event_type) {
+        return;
+    }
     static std::unordered_set<std::string> const valid_events{"SuccessfulAuth"};
-    if (auto const event_type = event.getValue("Event")) {
-        if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
-            // Android based Yealink deskphones will wake the screen whenever they receive a PJSIP notify message. This
-            // can cause wear on the backlight mechanism of the deskphone. Make sure to only publish the phone state if
-            // the phone wasn't present for the lamp state change or the state requires the screen to be on (i.e., in
-            // order to catch the users attention).
-            auto const &aor = event["AccountID"];
-            auto const state = getCachedButtonState();
-            if (handset_cache_->addEndpoint(aor, event["RemoteAddress"]) || state->forceUpdate()) {
-                publishButtonState(aor, state->getXMLString());
-            }
+    if (!valid_events.contains(event_type.value())) {
+        return;
+    }
+
+    // Android based Yealink deskphones will wake the screen whenever they receive a PJSIP notify message. This
+    // can cause wear on the backlight mechanism of the deskphone. Make sure to only publish the phone state if
+    // the phone wasn't present for the lamp state change or the state requires the screen to be on (i.e., in
+    // order to catch the users attention).
+    if (event["Service"] == "PJSIP") {
+        auto const &aor = event["AccountID"];
+        auto const state = getCachedButtonState();
+        if (handset_cache_->addEndpoint(aor, event["RemoteAddress"]) || state->forceUpdate()) {
+            publishButtonState(aor, state->getXMLString());
         }
     }
 }

@@ -226,9 +226,7 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
     // Create deskphone cache
     auto const db_filename = ami_ini["handset_cache"]["filename"].as<std::string>();
     auto const db_expiry = ami_ini["handset_cache"]["expiry"].as<uint32_t>();
-    auto const db_flush_period = ami_ini["handset_cache"]["flush_period"].as<uint32_t>();
-    auto deskphone_cache = std::make_unique<HandsetCache>(db_filename, std::chrono::seconds(db_expiry),
-                                                          std::chrono::minutes(db_flush_period));
+    auto deskphone_cache = std::make_unique<HandsetCache>(db_filename, std::chrono::seconds(db_expiry));
 
     // Create lamp field monitor
     auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(std::move(deskphone_cache), io_conn);

@@ -23,15 +23,15 @@ protected:
     struct HandsetData {
         SQLAction action;
         std::string aor;
-        std::string ip;
+        std::string endpoint;
         int64_t expiry;
     };
 
 public:
-    explicit HandsetCache(std::string_view filename, std::chrono::milliseconds expiry, std::chrono::seconds flush_period);
+    explicit HandsetCache(std::string_view filename, std::chrono::milliseconds expiry);
     ~HandsetCache();
 
-    bool addEndpoint(std::string const &aor, std::string const &ip);
+    bool addEndpoint(std::string const &aor, std::string const &endpoint);
     void deleteEndpoint(std::string const &aor, std::string const &ip);
 
     void forEachAOR(std::function<void(std::string_view)> const &lambda);
@@ -45,8 +45,6 @@ private:
 
     dbpool::sqlite::ConnectionPool connection_pool_;
     std::chrono::milliseconds expiry_;
-    time_point_t flush_time_;
-    std::chrono::seconds flush_period_;
     std::vector<HandsetData> batch_;
     std::mutex batch_mut_;
     std::thread batch_write_thread_;

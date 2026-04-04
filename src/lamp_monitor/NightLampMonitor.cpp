@@ -38,17 +38,21 @@ NightLampMonitor::~NightLampMonitor()
 
 void NightLampMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 {
-    static std::unordered_set<std::string> const valid_events{"ExtensionStatus"};
-    if (auto const event_type = event.getValue("Event")) {
-        if (valid_events.contains(event_type.value()) && event["Context"] == context_ &&
-            event["Exten"] == park_exten_) {
-            updateLampState(event["Status"]);
-        }
+    // Filter unmonitored messages
+    auto const event_type = event.getValue("Event");
+    if (!event_type) {
+        return;
     }
-}
+    static std::unordered_set<std::string> const valid_events{"ExtensionStatus"};
+    if (!valid_events.contains(event_type.value())) {
+        return;
+    }
+    if (event["Context"] != context_ || event["Exten"] != park_exten_) {
+        return;
+    }
 
-void NightLampMonitor::updateLampState(std::string_view device_state)
-{
+    // Process AMI event
+    auto const &device_state = event["Status"];
     if (device_state == "0") {
         setButtonOn(false);
     }

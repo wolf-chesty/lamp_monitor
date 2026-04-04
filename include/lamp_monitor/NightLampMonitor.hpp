@@ -22,8 +22,6 @@ public:
 private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
-    void updateLampState(std::string_view device_state);
-
     std::string park_exten_;
     std::string context_;
     std::string device_;

@@ -33,25 +33,28 @@ ParkedCallMonitor::~ParkedCallMonitor()
 
 void ParkedCallMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 {
+    auto const event_type = event.getValue("Event");
+    if (!event_type) {
+        return;
+    }
+
     static std::unordered_set<std::string> const park_events{"ParkedCall"};
     static std::unordered_set<std::string> const unpark_events{"ParkedCallGiveUp", "ParkedCallTimeOut", "UnParkedCall"};
-    if (auto const event_type = event.getValue("Event")) {
-        bool park_event{false};
-        if (park_events.contains(event_type.value())) {
-            std::string const extension = event["ParkingSpace"];
-            parked_extens_.emplace(extension);
-            park_event = true;
-        }
-        else if (unpark_events.contains(event_type.value())) {
-            std::string const extension = event["ParkingSpace"];
-            parked_extens_.erase(extension);
-            park_event = true;
-        }
+    bool park_event{false};
+    if (park_events.contains(event_type.value())) {
+        std::string const extension = event["ParkingSpace"];
+        parked_extens_.emplace(extension);
+        park_event = true;
+    }
+    else if (unpark_events.contains(event_type.value())) {
+        std::string const extension = event["ParkingSpace"];
+        parked_extens_.erase(extension);
+        park_event = true;
+    }
 
-        if (park_event) {
-            parked_call_count_ = parked_extens_.size();
-            setButtonOn(parked_call_count_ > 0);
-        }
+    if (park_event) {
+        parked_call_count_ = parked_extens_.size();
+        setButtonOn(parked_call_count_ > 0);
     }
 }
 
