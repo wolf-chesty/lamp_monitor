@@ -194,10 +194,7 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
         } while (run_thread_flag);
     });
 
-    // Name the thread so it shows up in top
-    std::string_view thread_name("ping_ami");
-    assert(thread_name.length() <= 16);
-    pthread_setname_np(work_thread.native_handle(), thread_name.data());
+    pthread_setname_np(work_thread.native_handle(), "ping_ami");
 
     return work_thread;
 }

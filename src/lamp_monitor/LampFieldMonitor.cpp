@@ -117,9 +117,7 @@ void LampFieldMonitor::startWorkThread()
     button_state_thread_run_ = true;
     button_state_thread_ = std::thread(&LampFieldMonitor::workThread, this);
 
-    std::string_view thread_name("lamp_field");
-    assert(thread_name.length() <= 16);
-    pthread_setname_np(button_state_thread_.native_handle(), thread_name.data());
+    pthread_setname_np(button_state_thread_.native_handle(), "lamp_field");
 }
 
 void LampFieldMonitor::stopWorkThread()
