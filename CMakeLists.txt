@@ -20,18 +20,23 @@ option(UNIT_TESTS "Build unit tests" ON)
 include(third_party/argparse.cmake)
 include(third_party/c++ami.cmake)
 include(third_party/cpp-httplib.cmake)
+include(third_party/dbpool.cmake)
 include(third_party/fmt.cmake)
 include(third_party/pugixml.cmake)
 include(third_party/inifile-cpp.cmake)
 
 if (COVERAGE)
     set(CPPAMI_COVERAGE ON)
+    set(DBPOOL_COVERAGE ON)
 elseif (PERF)
     set(CPPAMI_PERF ON)
+    set(DBPOOL_PERF ON)
 elseif (SANITIZE_ADDRESS)
     set(CPPAMI_SANITIZE_ADDRESS ON)
+    set(DBPOOL_SANITIZE_ADDRESS ON)
 elseif (SANITIZE_THREAD)
     set(CPPAMI_SANITIZE_THREAD ON)
+    set(DBPOOL_SANITIZE_THREAD ON)
 endif ()
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -39,19 +44,19 @@ endif ()
 # ----------------------------------------------------------------------------------------------------------------------
 add_executable(lamp_monitor "")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 target_include_directories(lamp_monitor
     PUBLIC
     include
 )
 
-
 target_link_libraries(lamp_monitor
     PUBLIC
     anl
     argparse
     c++ami
+    dbpool
     httplib
     pugixml
     inicpp::inicpp

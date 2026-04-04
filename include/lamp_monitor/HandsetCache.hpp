@@ -4,24 +4,54 @@
 #ifndef HANDSET_CACHE_HPP
 #define HANDSET_CACHE_HPP
 
-#include <unordered_set>
+#include <chrono>
+#include <condition_variable>
+#include <dbpool/sqlite/ConnectionPool.hpp>
+#include <functional>
 #include <mutex>
-#include <string>
+#include <thread>
+#include <vector>
 
 class HandsetCache {
 public:
-    HandsetCache() = default;
-    HandsetCache(HandsetCache const &) = default;
-    HandsetCache(HandsetCache &&) noexcept = default;
-~HandsetCache() = default;
+    using clock_t = std::chrono::steady_clock;
+    using time_point_t = clock_t::time_point;
 
-    bool aorNeedsUpdate(std::string const &aor);
-    void clearValidAORs();
-    void invalidateAOR(std::string const &aor);
+protected:
+    enum class SQLAction { remove, insert };
+
+    struct HandsetData {
+        SQLAction action;
+        std::string aor;
+        std::string ip;
+        int64_t expiry;
+    };
+
+public:
+    explicit HandsetCache(std::string_view filename, std::chrono::milliseconds expiry, std::chrono::seconds flush_period);
+    ~HandsetCache();
+
+    bool addEndpoint(std::string const &aor, std::string const &ip);
+    void deleteEndpoint(std::string const &aor, std::string const &ip);
+
+    void forEachAOR(std::function<void(std::string_view)> const &lambda);
 
 private:
-    std::unordered_set<std::string> valid_aors_;
-    std::mutex valid_aors_mut_;
+    void initializeDatabase();
+
+    void startWorkThread();
+    void stopWorkThread();
+    void workThread();
+
+    dbpool::sqlite::ConnectionPool connection_pool_;
+    std::chrono::milliseconds expiry_;
+    time_point_t flush_time_;
+    std::chrono::seconds flush_period_;
+    std::vector<HandsetData> batch_;
+    std::mutex batch_mut_;
+    std::thread batch_write_thread_;
+    std::atomic<bool> batch_write_run_;
+    std::condition_variable batch_write_cv_;
 };
 
 #endif

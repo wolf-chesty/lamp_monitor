@@ -7,12 +7,14 @@
 #include <c++ami/action/PjsipShowRegistrationInboundContactStatuses.hpp>
 #include <cassert>
 #include <fmt/core.h>
-#include <iostream>
 #include <sstream>
 
-LampFieldMonitor::LampFieldMonitor(std::shared_ptr<cpp_ami::Connection> io_conn)
+LampFieldMonitor::LampFieldMonitor(std::unique_ptr<HandsetCache> handset_cache,
+                                   std::shared_ptr<cpp_ami::Connection> io_conn)
     : io_conn_(std::move(io_conn))
+    , handset_cache_(std::move(handset_cache))
 {
+    assert(handset_cache_);
     assert(io_conn_);
     ami_callback_id_ =
         io_conn_->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
@@ -27,14 +29,23 @@ LampFieldMonitor::~LampFieldMonitor()
     stopWorkThread();
 }
 
+/// This callback is invoked for every AMI event that is published by the Asterisk server. This callback will process
+/// SuccessfulAuth events from the PJSIP service. This event type is published every time a phone successfully registers
+/// with the Asterisk server.
+///
+/// Upon successful registration of a deskphone this callback will publish the current lamp states to the phone.
 void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 {
     static std::unordered_set<std::string> const valid_events{"SuccessfulAuth"};
     if (auto const event_type = event.getValue("Event")) {
         if (valid_events.contains(event_type.value()) && event["Service"] == "PJSIP") {
+            // Android based Yealink deskphones will wake the screen whenever they receive a PJSIP notify message. This
+            // can cause wear on the backlight mechanism of the deskphone. Make sure to only publish the phone state if
+            // the phone wasn't present for the lamp state change or the state requires the screen to be on (i.e., in
+            // order to catch the users attention).
             auto const &aor = event["AccountID"];
             auto const state = getCachedButtonState();
-            if (handset_cache_.aorNeedsUpdate(aor) || state->forceUpdate()) {
+            if (handset_cache_->addEndpoint(aor, event["RemoteAddress"]) || state->forceUpdate()) {
                 publishButtonState(aor, state->getXMLString());
             }
         }
@@ -44,7 +55,7 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 void LampFieldMonitor::addLamp(std::shared_ptr<LampMonitor> const &lamp)
 {
     std::lock_guard const lock(lamps_mut_);
-    lamps_.push_back(lamp);
+    lamps_.emplace_back(lamp);
     lamp->setLampFieldMonitor(shared_from_this());
 
     invalidateButtonState();
@@ -54,7 +65,8 @@ void LampFieldMonitor::addLamps(std::list<std::shared_ptr<LampMonitor>> const &l
 {
     std::lock_guard const lock(lamps_mut_);
     for (auto const lamp : lamps) {
-        lamps_.push_back(lamp);
+        assert(lamp);
+        lamps_.emplace_back(lamp);
         lamp->setLampFieldMonitor(shared_from_this());
     }
 
@@ -87,6 +99,11 @@ std::shared_ptr<LampFieldState> LampFieldMonitor::getButtonState(std::vector<std
     execute_xml.append_attribute("Beep") = beep ? "yes" : "no";
 
     return std::make_shared<LampFieldState>(std::move(doc), beep);
+}
+
+void LampFieldMonitor::invalidateAOR(std::string const &aor, std::string const &ip)
+{
+    handset_cache_->deleteEndpoint(aor, ip);
 }
 
 void LampFieldMonitor::invalidateButtonState()
@@ -130,29 +147,15 @@ void LampFieldMonitor::workThread()
     }
 }
 
-void LampFieldMonitor::publishButtonState(std::string const &button_state_xml)
+void LampFieldMonitor::publishButtonState(std::string const &button_state_xml) const
 {
     cpp_ami::action::PJSIPNotify notify;
     notify.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
                                   fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(button_state_xml))});
 
-    handset_cache_.clearValidAORs();
-
-    // Get list of ContactStatusDetail events
-    cpp_ami::action::PJSIPShowRegistrationInboundContactStatuses const list_action;
-    auto const contact_list = io_conn_->invoke(list_action);
-    // Notify all reachable contacts immediately
-    std::unordered_set<std::string> unique_aors;
-    contact_list->forEach([this, &notify, &unique_aors](cpp_ami::event::Event const &event) mutable -> bool {
-        if (event["Status"] == "Reachable") {
-            std::string const &aor = event["EndpointName"];
-            auto const inserted_aor = unique_aors.insert(aor);
-            if (inserted_aor.second) {
-                notify["Endpoint"] = aor;
-                io_conn_->asyncInvoke(notify);
-            }
-        }
-        return false;
+    handset_cache_->forEachAOR([this, notify = std::move(notify)](std::string_view aor) mutable -> void {
+        notify["Endpoint"] = aor;
+        io_conn_->asyncInvoke(notify);
     });
 }
 
@@ -177,9 +180,4 @@ std::shared_ptr<LampFieldState> LampFieldMonitor::getCachedButtonState()
 {
     std::lock_guard const lock(cached_state_mut_);
     return cached_state_;
-}
-
-void LampFieldMonitor::invalidateAOR(std::string const &aor)
-{
-    handset_cache_.invalidateAOR(aor);
 }

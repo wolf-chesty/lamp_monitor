@@ -9,12 +9,7 @@
 class NightLampState : public LampMonitor {
 public:
     explicit NightLampState(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on);
-    NightLampState(NightLampState const &) = delete;
-    NightLampState(NightLampState &&) = delete;
     ~NightLampState() override = default;
-
-    NightLampState &operator=(NightLampState const &) = delete;
-    NightLampState &operator=(NightLampState &&) = delete;
 
     // LampMonitor interface
     bool needsBeep() const override;

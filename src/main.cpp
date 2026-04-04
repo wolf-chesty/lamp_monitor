@@ -131,8 +131,8 @@ std::unique_ptr<httplib::Server>
         res.set_content(state->getXMLString(), "text/xml");
 
         // Remove requesting deskphone from cache
-        if (req.has_param("aor")) {
-            lamp_field_monitor->invalidateAOR(req.get_param_value("aor"));
+        if (req.has_param("aor") && req.has_param("ip")) {
+            lamp_field_monitor->invalidateAOR(req.get_param_value("aor"), req.get_param_value("ip"));
         }
     });
 
@@ -226,8 +226,15 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
     auto const park_info_uri = ami_ini["http_server"]["park_info_uri"].as<std::string>();
     auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id, http_url + park_info_uri);
 
+    // Create deskphone cache
+    auto const db_filename = ami_ini["handset_cache"]["filename"].as<std::string>();
+    auto const db_expiry = ami_ini["handset_cache"]["expiry"].as<uint32_t>();
+    auto const db_flush_period = ami_ini["handset_cache"]["flush_period"].as<uint32_t>();
+    auto deskphone_cache = std::make_unique<HandsetCache>(db_filename, std::chrono::seconds(db_expiry),
+                                                          std::chrono::minutes(db_flush_period));
+
     // Create lamp field monitor
-    auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(io_conn);
+    auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(std::move(deskphone_cache), io_conn);
     lamp_field_monitor->addLamps({night_lamp_monitor, park_lamp_monitor});
 
     // Start HTTP server

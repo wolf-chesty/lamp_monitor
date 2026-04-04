@@ -16,13 +16,8 @@ class LampFieldMonitor;
 /// @brief Base class for objects that manage button lamps on the phone.
 class LampMonitor : public std::enable_shared_from_this<LampMonitor> {
 public:
-    LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on = false);
-    LampMonitor(LampMonitor const &) = delete;
-    LampMonitor(LampMonitor &&) noexcept = delete;
+    explicit LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on = false);
     virtual ~LampMonitor() = default;
-
-    LampMonitor &operator=(LampMonitor const &) = delete;
-    LampMonitor &operator=(LampMonitor &&) noexcept = delete;
 
     void setLampFieldMonitor(std::weak_ptr<LampFieldMonitor> const &lamp_field_monitor);
 

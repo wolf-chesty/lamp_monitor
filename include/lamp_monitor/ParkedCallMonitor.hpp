@@ -19,14 +19,9 @@
 class ParkedCallMonitor : public LampMonitor {
 public:
     ParkedCallMonitor() = delete;
-    ParkedCallMonitor(ParkedCallMonitor const &) = delete;
-    ParkedCallMonitor(ParkedCallMonitor &&) noexcept = delete;
     explicit ParkedCallMonitor(std::shared_ptr<cpp_ami::Connection> const &io_conn, uint8_t button_id,
                                std::string parked_call_info_uri);
     ~ParkedCallMonitor() override;
-
-    ParkedCallMonitor &operator=(ParkedCallMonitor const &) = delete;
-    ParkedCallMonitor &operator=(ParkedCallMonitor &&) noexcept = delete;
 
     static std::string createMessageXML(bool beep, uint8_t timeout, std::string const &title, std::string const &text);
 
