@@ -4,6 +4,7 @@
 #include "lamp_monitor/LampFieldMonitor.hpp"
 #include "lamp_monitor/NightLampMonitor.hpp"
 #include "lamp_monitor/ParkedCallMonitor.hpp"
+#include "lamp_monitor/PhonebookProvider.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -24,12 +25,13 @@ std::unique_ptr<httplib::Server>
     createHttpServer(std::shared_ptr<LampFieldMonitor> const &lamp_field_monitor, std::string const &blf_state_uri,
                      std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
                      std::string const &park_call_list_uri, std::string const &park_call_info_uri,
-                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri);
+                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri,
+                     std::shared_ptr<PhonebookProvider> const &phonebook_provider, std::string const &phonebook_uri);
 
 std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
                                 std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period);
 
-void serviceThread(ini::IniFile &ini_file, std::shared_ptr<cpp_ami::Connection> const &io_conn);
+void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn);
 
 // Globals =============================================================================================================
 
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
     cpp_ami::action::Logoff const logoff;
     reaction = io_conn->invoke(logoff);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 /// @brief Handles termination events sent to the application.
@@ -111,13 +113,16 @@ void signalHandler(int signum)
 /// @param park_call_info_uri HTTP URI to query parked call details.
 /// @param night_lamp_monitor Pointer to object that monitors the night mode of the system.
 /// @param night_uri HTTP URI to disable/enable night mode.
+/// @param phonebook_provider Pointer to object that provides the organization phonebook.
+/// @param phonebook_uri HTTP URI to get the organization phonebook.
 ///
 /// @return Pointer to an HTTP server.
 std::unique_ptr<httplib::Server>
     createHttpServer(std::shared_ptr<LampFieldMonitor> const &lamp_field_monitor, std::string const &blf_state_uri,
                      std::shared_ptr<ParkedCallMonitor> const &parked_call_monitor,
                      std::string const &park_call_list_uri, std::string const &park_call_info_uri,
-                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri)
+                     std::shared_ptr<NightLampMonitor> const &night_lamp_monitor, std::string const &night_uri,
+                     std::shared_ptr<PhonebookProvider> const &phonebook_provider, std::string const &phonebook_uri)
 {
     assert(parked_call_monitor);
     assert(night_lamp_monitor);
@@ -126,17 +131,17 @@ std::unique_ptr<httplib::Server>
 
     // Retrieve the current BLF button state for the deskphone.
     http_server->Get(blf_state_uri, [lamp_field_monitor](httplib::Request const &req, httplib::Response &res) -> void {
-        // Publish current lamp field button state
-        auto const state = lamp_field_monitor->getCachedButtonState();
-        res.set_content(state->getXMLString(), "text/xml");
-
         // Remove requesting deskphone from cache
         if (req.has_param("aor") && req.has_param("ip")) {
             lamp_field_monitor->invalidateAOR(req.get_param_value("aor"), req.get_param_value("ip"));
         }
+
+        // Publish current lamp field button state
+        auto const state = lamp_field_monitor->getCachedButtonState();
+        res.set_content(state->getXMLString(), "text/xml");
     });
 
-    // Lambda to change the night state. Handsets can execute this URI to place/remove the call from night mode.
+    // Lambda to change the night state. Handsets can execute this URI to place the phones into or out of night mode.
     http_server->Get(
         night_uri, [night_lamp_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
             res.set_content(night_lamp_monitor->resetNightState(), "text/xml");
@@ -163,6 +168,12 @@ std::unique_ptr<httplib::Server>
                 true, 5, "Missing Extension Parameter", "Missing URL parameter '&selection=7xxx'.");
             res.set_content(error_xml, "text/xml");
         });
+
+    // Lambda to list the organizational phonebook.
+    http_server->Get(phonebook_uri,
+                     [phonebook_provider](httplib::Request const &req, httplib::Response &res) -> void {
+                         res.set_content(phonebook_provider->getPhonebookXML(), "text/xml");
+                     });
 
     return http_server;
 }
@@ -201,9 +212,9 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
 
 /// @brief Main service thread.
 ///
-/// @param ami_ini Configuration file.
+/// @param cfg_ini Configuration file.
 /// @param io_conn Asterisk AMI connection.
-void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn)
+void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     // Asterisk will drop AMI connections it hasn't heard from in a while; start an AMI ping thread
     std::atomic<bool> thread_run_flag{true};
@@ -211,37 +222,41 @@ void serviceThread(ini::IniFile &ami_ini, std::shared_ptr<cpp_ami::Connection> c
     std::thread ami_ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
 
     // Create monitor for the night button
-    auto const night_button_id = ami_ini["night_button"]["button_id"].as<unsigned int>();
-    auto const night_exten = ami_ini["night_button"]["exten"].as<std::string>();
-    auto const night_context = ami_ini["night_button"]["context"].as<std::string>();
-    auto const night_device = ami_ini["night_button"]["device"].as<std::string>();
+    auto const night_button_id = cfg_ini["night_button"]["button_id"].as<unsigned int>();
+    auto const night_exten = cfg_ini["night_button"]["exten"].as<std::string>();
+    auto const night_context = cfg_ini["night_button"]["context"].as<std::string>();
+    auto const night_device = cfg_ini["night_button"]["device"].as<std::string>();
     auto night_lamp_monitor =
         std::make_shared<NightLampMonitor>(io_conn, night_button_id, night_exten, night_context, night_device);
     // Create monitor for the parking button
-    auto const park_button_id = ami_ini["park_button"]["button_id"].as<unsigned int>();
-    auto const http_url = ami_ini["http_server"]["url"].as<std::string>();
-    auto const park_info_uri = ami_ini["http_server"]["park_info_uri"].as<std::string>();
+    auto const park_button_id = cfg_ini["park_button"]["button_id"].as<unsigned int>();
+    auto const http_url = cfg_ini["http_server"]["url"].as<std::string>();
+    auto const park_info_uri = cfg_ini["http_server"]["park_info_uri"].as<std::string>();
     auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id, http_url + park_info_uri);
 
     // Create deskphone cache
-    auto const db_filename = ami_ini["handset_cache"]["filename"].as<std::string>();
-    auto const db_expiry = ami_ini["handset_cache"]["expiry"].as<uint32_t>();
+    auto const db_filename = cfg_ini["handset_cache"]["filename"].as<std::string>();
+    auto const db_expiry = cfg_ini["handset_cache"]["expiry"].as<uint32_t>();
     auto deskphone_cache = std::make_unique<HandsetCache>(db_filename, std::chrono::seconds(db_expiry));
 
     // Create lamp field monitor
     auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(std::move(deskphone_cache), io_conn);
     lamp_field_monitor->addLamps({night_lamp_monitor, park_lamp_monitor});
 
+    // Create phonebook provider
+    auto phonebook_provider = std::make_shared<PhonebookProvider>(io_conn, std::chrono::minutes(60));
+
     // Start HTTP server
-    auto const blf_state_uri = ami_ini["http_server"]["blf_state_uri"].as<std::string>();
-    auto const night_uri = ami_ini["http_server"]["night_uri"].as<std::string>();
-    auto const park_list_uri = ami_ini["http_server"]["park_list_uri"].as<std::string>();
+    auto const blf_state_uri = cfg_ini["http_server"]["blf_state_uri"].as<std::string>();
+    auto const night_uri = cfg_ini["http_server"]["night_uri"].as<std::string>();
+    auto const park_list_uri = cfg_ini["http_server"]["park_list_uri"].as<std::string>();
+    auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
     g_server = createHttpServer(lamp_field_monitor, blf_state_uri, park_lamp_monitor, park_list_uri, park_info_uri,
-                                night_lamp_monitor, night_uri);
+                                night_lamp_monitor, night_uri, phonebook_provider, phonebook_uri);
     signal(SIGINT, signalHandler);
     // httplib::Server::listen is a blocking call
-    auto const http_addr = ami_ini["http_server"]["addr"].as<std::string>();
-    auto const http_port = ami_ini["http_server"]["port"].as<uint16_t>();
+    auto const http_addr = cfg_ini["http_server"]["addr"].as<std::string>();
+    auto const http_port = cfg_ini["http_server"]["port"].as<uint16_t>();
     g_server->listen(http_addr, http_port);
 
     // Stop ping thread

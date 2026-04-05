@@ -22,8 +22,9 @@ include(third_party/c++ami.cmake)
 include(third_party/cpp-httplib.cmake)
 include(third_party/dbpool.cmake)
 include(third_party/fmt.cmake)
-include(third_party/pugixml.cmake)
 include(third_party/inifile-cpp.cmake)
+include(third_party/pugixml.cmake)
+include(third_party/yaml-cpp.cmake)
 
 if (COVERAGE)
     set(CPPAMI_COVERAGE ON)
@@ -58,8 +59,9 @@ target_link_libraries(lamp_monitor
     c++ami
     dbpool
     httplib
-    pugixml
     inicpp::inicpp
+    pugixml
+    yaml-cpp::yaml-cpp
 )
 
 target_sources(lamp_monitor
@@ -71,6 +73,7 @@ target_sources(lamp_monitor
     src/lamp_monitor/NightLampMonitor.cpp
     src/lamp_monitor/NightLampState.cpp
     src/lamp_monitor/ParkedCallMonitor.cpp
+    src/lamp_monitor/PhonebookProvider.cpp
     src/main.cpp
 )
 

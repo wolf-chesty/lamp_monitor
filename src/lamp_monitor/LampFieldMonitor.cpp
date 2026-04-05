@@ -173,7 +173,7 @@ void LampFieldMonitor::publishButtonState(std::string const &aor, std::string co
     io_conn_->asyncInvoke(action);
 }
 
-std::shared_ptr<LampFieldState> LampFieldMonitor::cacheButtonState(std::shared_ptr<LampFieldState> state)
+std::shared_ptr<LampFieldState> LampFieldMonitor::cacheButtonState(std::shared_ptr<LampFieldState> const &state)
 {
     // Cache the XML string
     std::lock_guard const lock(cached_state_mut_);

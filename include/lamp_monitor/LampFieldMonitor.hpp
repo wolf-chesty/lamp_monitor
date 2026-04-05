@@ -26,7 +26,6 @@
 /// this object to notify all deskphones registered with the Asterisk server of the new button state.
 class LampFieldMonitor : public std::enable_shared_from_this<LampFieldMonitor> {
 public:
-    LampFieldMonitor() = delete;
     explicit LampFieldMonitor(std::unique_ptr<HandsetCache> handset_cache,
                               std::shared_ptr<cpp_ami::Connection> io_conn);
     virtual ~LampFieldMonitor();
@@ -48,7 +47,7 @@ private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
     std::shared_ptr<LampFieldState> getButtonState();
-    std::shared_ptr<LampFieldState> cacheButtonState(std::shared_ptr<LampFieldState> state);
+    std::shared_ptr<LampFieldState> cacheButtonState(std::shared_ptr<LampFieldState> const &state);
 
     void publishButtonState(std::string const &aor, std::string const &button_state_xml) const;
     void publishButtonState(std::string const &button_state_xml) const;

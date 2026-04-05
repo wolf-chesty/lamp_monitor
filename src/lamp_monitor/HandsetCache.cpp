@@ -31,7 +31,6 @@ HandsetCache::~HandsetCache()
     auto checkpoint = connection.getStmt("PRAGMA wall_checkpoint(TRUNCATE);");
     ret = checkpoint.execute();
     assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
-
 }
 
 void HandsetCache::initializeDatabase()
@@ -39,7 +38,7 @@ void HandsetCache::initializeDatabase()
     connection_pool_.setPrepSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000");
 
     auto connection = connection_pool_.getConnection();
-    connection.exec("CREATE TABLE IF NOT EXISTS endpoints ("
+    connection.exec(" CREATE TABLE IF NOT EXISTS endpoints ("
                     "aor TEXT NOT NULL,"
                     " endpoint TEXT NOT NULL,"
                     " ip_ver TEXT,"
@@ -52,7 +51,7 @@ void HandsetCache::initializeDatabase()
     connection.exec("UPDATE endpoints SET expiry = 0;");
 }
 
-bool HandsetCache::addEndpoint(std::string const &aor, std::string const &endpoint)
+bool HandsetCache::addEndpoint(std::string aor, std::string endpoint)
 {
     // Query table for unexpired handset
     auto connection = connection_pool_.getConnection();
@@ -66,18 +65,20 @@ bool HandsetCache::addEndpoint(std::string const &aor, std::string const &endpoi
     assert(ret == dbpool::PreparedStmt::ReturnCode::Row);
     auto const found_rec{check.getBool(0)};
 
-    // Enqueue the endpoint for add
+    // Enqueue adding endpoint to the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::insert, aor, endpoint, (now + expiry_).time_since_epoch().count());
+    batch_.emplace_back(SQLAction::insert, std::move(aor), std::move(endpoint),
+                        (now + expiry_).time_since_epoch().count());
     batch_write_cv_.notify_one();
 
     return !found_rec;
 }
 
-void HandsetCache::deleteEndpoint(std::string const &aor, std::string const &ip)
+void HandsetCache::deleteEndpoint(std::string aor, std::string ip)
 {
+    // Enqueue expiring endpoint from the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::remove, aor, ip, 0);
+    batch_.emplace_back(SQLAction::remove, std::move(aor), std::move(ip), 0);
     batch_write_cv_.notify_one();
 }
 
@@ -109,12 +110,19 @@ void HandsetCache::stopWorkThread()
     batch_write_thread_.join();
 }
 
+/// SQLite3 natively supports multiple simultaneous readers from a database but only supports one writer at any given
+/// moment. Simultaneous writes can fail with a SQLITE_BUSY error, requiring additional code to handle such an event. In
+/// order to circumvent this the caching object will handle all writes from a single thread. This should slightly
+/// improve performance as writes are done in the background with the caveat being that any read immediately following
+/// the enqueueing of a write may be out of date.
 void HandsetCache::workThread()
 {
-    // Rather than recompiling prepared statements for every iteration of this service thread this function will
-    // checkout a database connection keep it with this thread.
+    // Rather than recompiling prepared statements for every iteration of this service thread this function will compile
+    // the statements a single time for the duration of this thread.
     auto connection = connection_pool_.getConnection();
     auto begin = connection.getStmt("BEGIN;");
+    // Avoid deleing the record since that can be expensive and lead to a fragmented database file. Just expire the
+    // record since the phone may show up at a later time.
     auto del_aor = connection.getStmt("UPDATE endpoints SET expiry = 0 WHERE aor = ? AND ip = ?;");
     auto add_aor = connection.getStmt(
         "INSERT INTO endpoints (aor, endpoint, expiry, ip_ver, trans, ip, port)"
@@ -123,14 +131,16 @@ void HandsetCache::workThread()
         " DO UPDATE SET expiry = excluded.expiry, ip_ver = excluded.ip_ver, trans = excluded.trans, ip = excluded.ip, port = excluded.port;");
     auto commit = connection.getStmt("COMMIT;");
 
-    // Lambda to bind encoded fields to record
-    auto bind_fields = [](dbpool::PreparedStmt &add_aor, int idx, std::string const &endpoint) -> void {
-        // Split the IP into its separate fields
+    // Lambda to bind encoded fields to record. The endpoint value coming from Asterisk is actually several fields
+    // delimited by forward slashes. This lambda will split the endpoint up into its separate fields and bind them to
+    // the insert statement.
+    auto bind_fields = [&add_aor](int idx, std::string const &endpoint) mutable -> void {
+        // Split endpoint into its separate fields
         auto const fields = endpoint | std::views::split('/') | std::views::transform([](auto &&r) {
                                 return std::string_view(&*r.begin(), std::ranges::distance(r));
                             });
 
-        // Bind fields
+        // Bind fields to the insert statement
         for (auto const field : fields) {
             if (idx != 7) {
                 add_aor.bindText(idx, field);
@@ -170,7 +180,7 @@ void HandsetCache::workThread()
                 add_aor.bindText(1, data.aor);
                 add_aor.bindText(2, data.endpoint);
                 add_aor.bindInt64(3, data.expiry);
-                bind_fields(add_aor, 4, data.endpoint);
+                bind_fields(4, data.endpoint);
                 ret = add_aor.execute();
                 assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
                 add_aor.reset();
