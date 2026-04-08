@@ -8,29 +8,24 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
-#include <thread>
-#include <condition_variable>
 
 class PhonebookProvider {
 public:
+    using clock_t = std::chrono::steady_clock;
+
+public:
     explicit PhonebookProvider(std::shared_ptr<cpp_ami::Connection> const &io_conn, std::chrono::minutes expiry);
-    ~PhonebookProvider();
+    ~PhonebookProvider() = default;
 
     std::string getPhonebookXML();
 
 private:
-    void setPhonebookXML(std::string phonebook_xml);
-
-    void startThread();
-    void stopThread();
-    void workThread();
+    static std::string createPhonebookXML(std::set<std::string> const &phonebook);
 
     std::shared_ptr<cpp_ami::Connection> io_conn_;
-
-    std::thread work_thread_;
-    std::atomic<bool> work_thread_run_;
-    std::condition_variable work_thread_cv_;
+    clock_t::time_point timestamp_;
     std::chrono::minutes expiry_;
     std::string phonebook_xml_;
     std::mutex phonebook_xml_mut_;
