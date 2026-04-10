@@ -73,7 +73,9 @@ target_sources(lamp_monitor
     src/lamp_monitor/NightLampMonitor.cpp
     src/lamp_monitor/NightLampState.cpp
     src/lamp_monitor/ParkedCallMonitor.cpp
+    src/lamp_monitor/PhonebookDetail.cpp
     src/lamp_monitor/PhonebookProvider.cpp
+    src/lamp_monitor/YealinkPhonebookXML.cpp
     src/main.cpp
 )
 

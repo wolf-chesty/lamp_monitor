@@ -35,7 +35,7 @@ HandsetCache::~HandsetCache()
 
 void HandsetCache::initializeDatabase()
 {
-    connection_pool_.setPrepSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000");
+    connection_pool_.setPrepSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
 
     auto connection = connection_pool_.getConnection();
     connection.exec(" CREATE TABLE IF NOT EXISTS endpoints ("
@@ -47,7 +47,6 @@ void HandsetCache::initializeDatabase()
                     " port INT,"
                     " expiry INT64,"
                     " PRIMARY KEY(aor, endpoint));");
-
     connection.exec("UPDATE endpoints SET expiry = 0;");
 }
 

@@ -4,31 +4,22 @@
 #ifndef PHONEBOOK_HANDLER_HPP
 #define PHONEBOOK_HANDLER_HPP
 
+#include "lamp_monitor/PhonebookDetail.hpp"
 #include <c++ami/Connection.hpp>
-#include <chrono>
 #include <memory>
-#include <mutex>
-#include <set>
 #include <string>
+#include <vector>
 
 class PhonebookProvider {
 public:
-    using clock_t = std::chrono::steady_clock;
-
-public:
-    explicit PhonebookProvider(std::shared_ptr<cpp_ami::Connection> const &io_conn, std::chrono::minutes expiry);
+    explicit PhonebookProvider(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter);
     ~PhonebookProvider() = default;
 
-    std::string getPhonebookXML();
+    std::vector<PhonebookDetail> getPhonebookDetails() const;
 
 private:
-    static std::string createPhonebookXML(std::set<std::string> const &phonebook);
-
     std::shared_ptr<cpp_ami::Connection> io_conn_;
-    clock_t::time_point timestamp_;
-    std::chrono::minutes expiry_;
-    std::string phonebook_xml_;
-    std::mutex phonebook_xml_mut_;
+    std::string filter_;
 };
 
 #endif
