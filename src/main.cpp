@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/ApplicationParameters.hpp"
-#include "lamp_monitor/LampFieldMonitor.hpp"
-#include "lamp_monitor/NightLampMonitor.hpp"
-#include "lamp_monitor/ParkedCallMonitor.hpp"
-#include "lamp_monitor/PhonebookProvider.hpp"
-#include "lamp_monitor/YealinkPhonebookXML.hpp"
+#include "ApplicationParameters.hpp"
+#include "LampFieldMonitor.hpp"
+#include "NightLampMonitor.hpp"
+#include "ParkedCallMonitor.hpp"
+#include "PhonebookProvider.hpp"
+#include "xml/yealink/CallParkMenu.hpp"
+#include "xml/yealink/Phonebook.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -229,23 +230,24 @@ std::shared_ptr<LampMonitor> createParkLampMonitor(std::unique_ptr<httplib::Serv
     auto const park_button_id = cfg_ini["park_button"]["button_id"].as<unsigned int>();
     auto const http_url = cfg_ini["http_server"]["url"].as<std::string>();
     auto const park_info_uri = cfg_ini["http_server"]["park_info_uri"].as<std::string>();
-    auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id, http_url + park_info_uri);
+    auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id);
+    auto parked_call_menu = std::make_shared<xml::yealink::CallParkMenu>(io_conn, http_url + park_info_uri);
 
     // Bind URI to get list of parked calls
     auto const park_list_uri = cfg_ini["http_server"]["park_list_uri"].as<std::string>();
     http_server->Get(park_list_uri,
-                     [park_lamp_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(park_lamp_monitor->getParkedCallMenu(), "text/xml");
+                     [parked_call_menu]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                         res.set_content(parked_call_menu->getParkedCallMenu(), "text/xml");
                      });
 
     // Bind URI to get parked call info
-    http_server->Get(park_info_uri, [park_lamp_monitor](httplib::Request const &req, httplib::Response &res) -> void {
+    http_server->Get(park_info_uri, [parked_call_menu](httplib::Request const &req, httplib::Response &res) -> void {
         if (req.has_param("selection")) {
-            res.set_content(park_lamp_monitor->getParkedCallDetails(req.get_param_value("selection")), "text/xml");
+            res.set_content(parked_call_menu->getParkedCallDetails(req.get_param_value("selection")), "text/xml");
             return;
         }
 
-        static auto const error_xml = ParkedCallMonitor::createMessageXML(true, 5, "Missing Extension Parameter",
+        static auto const error_xml = parked_call_menu->createMessageXML(true, 5, "Missing Extension Parameter",
                                                                           "Missing URL parameter '&selection=xxx'.");
         res.set_content(error_xml, "text/xml");
     });
@@ -265,7 +267,7 @@ void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_serv
 
     // Setup Yealink phonebook URI
     auto const yealink_phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
-    auto yealink_phonebook = std::make_shared<YealinkPhonebookXML>(phonebook_provider, std::chrono::minutes(60));
+    auto yealink_phonebook = std::make_shared<xml::yealink::Phonebook>(phonebook_provider, std::chrono::minutes(60));
     http_server->Get(yealink_phonebook_uri,
                      [yealink_phonebook](httplib::Request const &req, httplib::Response &res) -> void {
                          res.set_content(yealink_phonebook->getPhonebookXML(), "text/xml");

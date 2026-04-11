@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/HandsetCache.hpp"
+#include "HandsetCache.hpp"
 
 #include <charconv>
 #include <ranges>

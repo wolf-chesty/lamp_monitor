@@ -4,7 +4,7 @@
 #ifndef NIGHT_LAMP_STATE_HPP
 #define NIGHT_LAMP_STATE_HPP
 
-#include "lamp_monitor/LampMonitor.hpp"
+#include "LampMonitor.hpp"
 
 class NightLampState : public LampMonitor {
 public:

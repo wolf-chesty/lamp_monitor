@@ -1,10 +1,9 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/PhonebookProvider.hpp"
+#include "PhonebookProvider.hpp"
 
 #include <c++ami/action/GetConfigJson.hpp>
-#include <iostream>
 #include <pugixml.hpp>
 #include <regex>
 #include <yaml-cpp/yaml.h>

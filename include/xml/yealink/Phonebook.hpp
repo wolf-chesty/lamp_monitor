@@ -1,24 +1,26 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef YEALINK_PHONEBOOK_PROVIDER_HPP
-#define YEALINK_PHONEBOOK_PROVIDER_HPP
+#ifndef XML_YEALINK_PHONEBOOK_HPP
+#define XML_YEALINK_PHONEBOOK_HPP
 
-#include "lamp_monitor/PhonebookXMLCreator.hpp"
+#include "PhonebookXMLCreator.hpp"
 
-#include "lamp_monitor/PhonebookProvider.hpp"
+#include "PhonebookProvider.hpp"
 #include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
 
-class YealinkPhonebookXML : public PhonebookXMLCreator {
+namespace xml::yealink {
+
+class Phonebook : public PhonebookXMLCreator {
 public:
     using clock_t = std::chrono::steady_clock;
 
 public:
-    explicit YealinkPhonebookXML(std::shared_ptr<PhonebookProvider> phonebook_provider, std::chrono::minutes expiry);
-    ~YealinkPhonebookXML() override = default;
+    explicit Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider, std::chrono::minutes expiry);
+    ~Phonebook() override = default;
 
     std::string getPhonebookXML() override;
 
@@ -29,5 +31,7 @@ private:
     std::string phonebook_xml_;
     std::mutex phonebook_xml_mut_;
 };
+
+}
 
 #endif

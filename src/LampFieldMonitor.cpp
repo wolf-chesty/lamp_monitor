@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/LampFieldMonitor.hpp"
+#include "LampFieldMonitor.hpp"
 
 #include <c++ami/action/PjsipNotify.hpp>
 #include <c++ami/action/PjsipShowRegistrationInboundContactStatuses.hpp>

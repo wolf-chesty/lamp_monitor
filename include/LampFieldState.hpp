@@ -9,6 +9,8 @@
 #include <string>
 
 /// @class LampFieldState
+///
+/// @brief Object contains the current lamp field state for deskphones.
 class LampFieldState {
 public:
     LampFieldState() = default;

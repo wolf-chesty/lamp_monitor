@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/PhonebookDetail.hpp"
+#include "PhonebookDetail.hpp"
 
 bool PhonebookDetail::operator==(PhonebookDetail const &rhs) const
 {

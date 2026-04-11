@@ -4,9 +4,8 @@
 #ifndef NIGHT_LAMP_MONITOR_HPP
 #define NIGHT_LAMP_MONITOR_HPP
 
-#include "lamp_monitor/NightLampState.hpp"
+#include "NightLampState.hpp"
 
-#include <atomic>
 #include <c++ami/util/KeyValDict.hpp>
 #include <string>
 

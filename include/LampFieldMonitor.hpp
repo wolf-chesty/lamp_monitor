@@ -4,9 +4,9 @@
 #ifndef LAMP_FIELD_MONITOR_HPP
 #define LAMP_FIELD_MONITOR_HPP
 
-#include "lamp_monitor/HandsetCache.hpp"
-#include "lamp_monitor/LampFieldState.hpp"
-#include "lamp_monitor/LampMonitor.hpp"
+#include "HandsetCache.hpp"
+#include "LampFieldState.hpp"
+#include "LampMonitor.hpp"
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
 #include <condition_variable>

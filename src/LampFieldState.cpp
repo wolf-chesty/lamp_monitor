@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/LampFieldState.hpp"
+#include "LampFieldState.hpp"
 
 #include <sstream>
 

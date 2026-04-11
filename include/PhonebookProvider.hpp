@@ -4,7 +4,7 @@
 #ifndef PHONEBOOK_HANDLER_HPP
 #define PHONEBOOK_HANDLER_HPP
 
-#include "lamp_monitor/PhonebookDetail.hpp"
+#include "PhonebookDetail.hpp"
 #include <c++ami/Connection.hpp>
 #include <memory>
 #include <string>

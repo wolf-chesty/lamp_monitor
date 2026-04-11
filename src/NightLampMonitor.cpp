@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/NightLampMonitor.hpp"
+#include "NightLampMonitor.hpp"
 
-#include "lamp_monitor/LampFieldMonitor.hpp"
+#include "LampFieldMonitor.hpp"
 #include <c++ami/action/ExtensionStateList.hpp>
 #include <c++ami/action/PjsipNotify.hpp>
 #include <c++ami/action/Setvar.hpp>

@@ -1,17 +1,17 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/LampMonitor.hpp"
+#include "LampMonitor.hpp"
 
-#include "lamp_monitor/LampFieldMonitor.hpp"
+#include "LampFieldMonitor.hpp"
 #include <cassert>
-#include <fmt/core.h>
 
 LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t button_id, bool button_on)
     : io_conn_(std::move(io_conn))
     , button_id_(button_id)
     , button_on_(button_on)
 {
+    assert(io_conn_);
 }
 
 std::shared_ptr<cpp_ami::Connection> LampMonitor::getAMIConnection() const

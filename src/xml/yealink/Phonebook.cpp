@@ -1,20 +1,22 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/YealinkPhonebookXML.hpp"
+#include "xml/yealink/Phonebook.hpp"
 
 #include <cassert>
 #include <pugixml.hpp>
 #include <sstream>
 
-YealinkPhonebookXML::YealinkPhonebookXML(std::shared_ptr<PhonebookProvider> phonebook_provider,
+using namespace xml::yealink;
+
+Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider,
                                                    std::chrono::minutes expiry)
     : phonebook_provider_(std::move(phonebook_provider))
     , expiry_(expiry)
 {
 }
 
-std::string YealinkPhonebookXML::getPhonebookXML()
+std::string Phonebook::getPhonebookXML()
 {
     std::lock_guard const lock(phonebook_xml_mut_);
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_monitor/NightLampState.hpp"
+#include "NightLampState.hpp"
 
 #include <fmt/core.h>
 
