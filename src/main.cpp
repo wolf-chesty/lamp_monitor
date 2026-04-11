@@ -5,7 +5,7 @@
 #include "LampFieldMonitor.hpp"
 #include "NightLampMonitor.hpp"
 #include "ParkedCallMonitor.hpp"
-#include "PhonebookProvider.hpp"
+#include "phonebook/PjsipWizardAdapter.hpp"
 #include "xml/yealink/CallParkMenu.hpp"
 #include "xml/yealink/Phonebook.hpp"
 #include <argparse/argparse.hpp>
@@ -169,7 +169,7 @@ void createLampFieldMonitor(std::unique_ptr<httplib::Server> const &http_server,
     // Create deskphone cache
     auto const db_filename = cfg_ini["handset_cache"]["filename"].as<std::string>();
     auto const db_expiry = cfg_ini["handset_cache"]["expiry"].as<uint32_t>();
-    auto deskphone_cache = std::make_unique<HandsetCache>(db_filename, std::chrono::seconds(db_expiry));
+    auto deskphone_cache = std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
     // Create lamp field monitor
     auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(std::move(deskphone_cache), io_conn);
     lamp_field_monitor->addLamps(lamp_monitors);
@@ -248,7 +248,7 @@ std::shared_ptr<LampMonitor> createParkLampMonitor(std::unique_ptr<httplib::Serv
         }
 
         static auto const error_xml = parked_call_menu->createMessageXML(true, 5, "Missing Extension Parameter",
-                                                                          "Missing URL parameter '&selection=xxx'.");
+                                                                         "Missing URL parameter '&selection=xxx'.");
         res.set_content(error_xml, "text/xml");
     });
 
@@ -263,7 +263,7 @@ std::shared_ptr<LampMonitor> createParkLampMonitor(std::unique_ptr<httplib::Serv
 void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_server,
                                std::shared_ptr<cpp_ami::Connection> const &io_conn, ini::IniFile &cfg_ini)
 {
-    auto phonebook_provider = std::make_shared<PhonebookProvider>(io_conn, "local-phone");
+    auto phonebook_provider = std::make_shared<phonebook::PJSIPWizardAdapter>(io_conn, "local-phone");
 
     // Setup Yealink phonebook URI
     auto const yealink_phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();

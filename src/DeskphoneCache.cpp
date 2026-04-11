@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "HandsetCache.hpp"
+#include "DeskphoneCache.hpp"
 
 #include <charconv>
 #include <ranges>
 
-HandsetCache::HandsetCache(std::string_view filename, std::chrono::milliseconds expiry)
+DeskphoneCache::DeskphoneCache(std::string_view filename, std::chrono::milliseconds expiry)
     : connection_pool_(filename)
     , expiry_(expiry)
 {
@@ -14,7 +14,7 @@ HandsetCache::HandsetCache(std::string_view filename, std::chrono::milliseconds 
     startWorkThread();
 }
 
-HandsetCache::~HandsetCache()
+DeskphoneCache::~DeskphoneCache()
 {
     stopWorkThread();
 
@@ -28,12 +28,14 @@ HandsetCache::~HandsetCache()
     assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
 
     // Truncate the database file
-    auto checkpoint = connection.getStmt("PRAGMA wall_checkpoint(TRUNCATE);");
-    ret = checkpoint.execute();
+    ret = connection.exec("PRAGMA wall_checkpoint(TRUNCATE);");
     assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
 }
 
-void HandsetCache::initializeDatabase()
+/// Initializes an SQLite3 database with tables used to maintain the active deskphone details. If the table of active
+/// deskphones already exists all deskphones in the database set to an expired state so that deskphone re-registration
+/// can immediately occur.
+void DeskphoneCache::initializeDatabase()
 {
     connection_pool_.setPrepSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
 
@@ -47,10 +49,20 @@ void HandsetCache::initializeDatabase()
                     " port INT,"
                     " expiry INT64,"
                     " PRIMARY KEY(aor, endpoint));");
+
+    // Database may contain old AOR endpoints that haven't expired from the cache yet. Expire these endpoints so that
+    // initial lamp updates work.
     connection.exec("UPDATE endpoints SET expiry = 0;");
 }
 
-bool HandsetCache::addEndpoint(std::string aor, std::string endpoint)
+/// Adds a deskphone to the table of active deskphones on the SIP network.
+///
+/// If the deskphone already exists in the table of active deskphones  the timestamp of that record is updated to the
+/// current time.
+///
+/// This function will return \c true if the deskphone didn't exist in the table of active deskphones. Otherwise, this
+/// function will return \c false indicating that the deskphone already existed in the table.
+bool DeskphoneCache::addEndpoint(std::string aor, std::string endpoint)
 {
     // Query table for unexpired handset
     auto connection = connection_pool_.getConnection();
@@ -73,7 +85,8 @@ bool HandsetCache::addEndpoint(std::string aor, std::string endpoint)
     return !found_rec;
 }
 
-void HandsetCache::deleteEndpoint(std::string aor, std::string ip)
+/// This function removes the deskphone identified by \c aor and \c ip from the table of active deskphones.
+void DeskphoneCache::deleteEndpoint(std::string aor, std::string ip)
 {
     // Enqueue expiring endpoint from the deskphone cache
     std::lock_guard const lock(batch_mut_);
@@ -81,7 +94,7 @@ void HandsetCache::deleteEndpoint(std::string aor, std::string ip)
     batch_write_cv_.notify_one();
 }
 
-void HandsetCache::forEachAOR(std::function<void(std::string_view)> const &lambda)
+void DeskphoneCache::forEachAOR(std::function<void(std::string_view)> const &lambda)
 {
     auto connection = connection_pool_.getConnection();
     auto select_stmt = connection.getStmt("SELECT DISTINCT aor FROM endpoints WHERE expiry > ?;");
@@ -92,15 +105,15 @@ void HandsetCache::forEachAOR(std::function<void(std::string_view)> const &lambd
     }
 }
 
-void HandsetCache::startWorkThread()
+void DeskphoneCache::startWorkThread()
 {
     batch_write_run_ = true;
-    batch_write_thread_ = std::thread(&HandsetCache::workThread, this);
+    batch_write_thread_ = std::thread(&DeskphoneCache::workThread, this);
 
     pthread_setname_np(batch_write_thread_.native_handle(), "db_writer");
 }
 
-void HandsetCache::stopWorkThread()
+void DeskphoneCache::stopWorkThread()
 {
     batch_write_run_ = false;
     batch_write_cv_.notify_one();
@@ -111,16 +124,20 @@ void HandsetCache::stopWorkThread()
 
 /// SQLite3 natively supports multiple simultaneous readers from a database but only supports one writer at any given
 /// moment. Simultaneous writes can fail with a SQLITE_BUSY error, requiring additional code to handle such an event. In
-/// order to circumvent this the caching object will handle all writes from a single thread. This should slightly
-/// improve performance as writes are done in the background with the caveat being that any read immediately following
-/// the enqueueing of a write may be out of date.
-void HandsetCache::workThread()
+/// order to circumvent this this object will handle all writes from a single thread. This should slightly improve
+/// performance as writes are done in the background with the caveat being that any read immediately following the
+/// enqueueing of a write may be out of date.
+void DeskphoneCache::workThread()
 {
     // Rather than recompiling prepared statements for every iteration of this service thread this function will compile
     // the statements a single time for the duration of this thread.
     auto connection = connection_pool_.getConnection();
+
+    // Transactions are going to be batched for atomicity, improved data coherence, and faster performance.
     auto begin = connection.getStmt("BEGIN;");
-    // Avoid deleing the record since that can be expensive and lead to a fragmented database file. Just expire the
+    auto commit = connection.getStmt("COMMIT;");
+
+    // Avoid deleting the record since that can be expensive and lead to a fragmented database file. Just expire the
     // record since the phone may show up at a later time.
     auto del_aor = connection.getStmt("UPDATE endpoints SET expiry = 0 WHERE aor = ? AND ip = ?;");
     auto add_aor = connection.getStmt(
@@ -128,7 +145,6 @@ void HandsetCache::workThread()
         " VALUES (?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(aor, endpoint)"
         " DO UPDATE SET expiry = excluded.expiry, ip_ver = excluded.ip_ver, trans = excluded.trans, ip = excluded.ip, port = excluded.port;");
-    auto commit = connection.getStmt("COMMIT;");
 
     // Lambda to bind encoded fields to record. The endpoint value coming from Asterisk is actually several fields
     // delimited by forward slashes. This lambda will split the endpoint up into its separate fields and bind them to

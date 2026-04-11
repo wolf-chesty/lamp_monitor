@@ -1,22 +1,25 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "PhonebookProvider.hpp"
+#include "phonebook/PjsipWizardAdapter.hpp"
 
 #include <c++ami/action/GetConfigJson.hpp>
-#include <pugixml.hpp>
 #include <regex>
 #include <yaml-cpp/yaml.h>
 
-PhonebookProvider::PhonebookProvider(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter)
+using namespace phonebook;
+
+PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter)
     : io_conn_(std::move(io_conn))
     , filter_(std::move(filter))
 {
 }
 
-std::vector<PhonebookDetail> PhonebookProvider::getPhonebookDetails() const
+/// Parses the Asterisk pjsip_wizard.conf file, returning the caller ID information for each AOR endpoint found.
+/// Endpoints are filtered by the template setting.
+std::vector<CallerIDInfo> PJSIPWizardAdapter::getPhonebookDetails() const
 {
-    std::vector<PhonebookDetail> phonebook_details;
+    std::vector<CallerIDInfo> phonebook_details;
 
     cpp_ami::action::GetConfigJSON action;
     action["Filename"] = "pjsip_wizard.conf";
@@ -25,7 +28,6 @@ std::vector<PhonebookDetail> PhonebookProvider::getPhonebookDetails() const
             auto const cfg_yaml = YAML::Load(event["JSON"]);
             for (auto const endpoint : cfg_yaml) {
                 auto const &aor_cfg_yaml = endpoint.second;
-
                 auto const type_node = aor_cfg_yaml["templates"];
                 if (!type_node) {
                     continue;

@@ -5,36 +5,10 @@
 
 #include <sstream>
 
-LampFieldState::LampFieldState(pugi::xml_document xml, bool beep_required)
+LampFieldState::LampFieldState(pugi::xml_document xml, bool force_update)
     : xml_(std::move(xml))
-    , beep_required_(beep_required)
+    , force_update_(force_update)
 {
-}
-
-LampFieldState::LampFieldState(LampFieldState const &r)
-    : beep_required_(r.beep_required_)
-{
-    xml_.reset(r.xml_);
-}
-
-LampFieldState::LampFieldState(LampFieldState &&r) noexcept
-    : xml_(std::move(r.xml_))
-    , beep_required_(r.beep_required_)
-{
-}
-
-LampFieldState &LampFieldState::operator=(LampFieldState const &r)
-{
-    xml_.reset(r.xml_);
-    beep_required_ = r.beep_required_;
-    return *this;
-}
-
-LampFieldState &LampFieldState::operator=(LampFieldState &&r) noexcept
-{
-    xml_ = std::move(r.xml_);
-    beep_required_ = r.beep_required_;
-    return *this;
 }
 
 pugi::xml_document const &LampFieldState::getXML() const
@@ -55,5 +29,5 @@ std::string LampFieldState::getXMLString()
 
 bool LampFieldState::forceUpdate() const
 {
-    return beep_required_;
+    return force_update_;
 }

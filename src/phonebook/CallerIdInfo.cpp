@@ -1,14 +1,16 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "PhonebookDetail.hpp"
+#include "phonebook/CallerIdInfo.hpp"
 
-bool PhonebookDetail::operator==(PhonebookDetail const &rhs) const
+using namespace phonebook;
+
+bool CallerIDInfo::operator==(CallerIDInfo const &rhs) const
 {
     return name == rhs.name && number == rhs.number;
 }
 
-auto PhonebookDetail::operator<=>(PhonebookDetail const &rhs) const
+auto CallerIDInfo::operator<=>(CallerIDInfo const &rhs) const
 {
     if (auto const cmp = name <=> rhs.name; cmp != 0) {
         return cmp;

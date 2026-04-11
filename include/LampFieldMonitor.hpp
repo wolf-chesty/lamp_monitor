@@ -4,7 +4,7 @@
 #ifndef LAMP_FIELD_MONITOR_HPP
 #define LAMP_FIELD_MONITOR_HPP
 
-#include "HandsetCache.hpp"
+#include "DeskphoneCache.hpp"
 #include "LampFieldState.hpp"
 #include "LampMonitor.hpp"
 #include <c++ami/Connection.hpp>
@@ -26,7 +26,7 @@
 /// this object to notify all deskphones registered with the Asterisk server of the new button state.
 class LampFieldMonitor : public std::enable_shared_from_this<LampFieldMonitor> {
 public:
-    explicit LampFieldMonitor(std::unique_ptr<HandsetCache> handset_cache,
+    explicit LampFieldMonitor(std::unique_ptr<DeskphoneCache> handset_cache,
                               std::shared_ptr<cpp_ami::Connection> io_conn);
     virtual ~LampFieldMonitor();
 
@@ -64,7 +64,7 @@ private:
     std::atomic<bool> button_state_thread_run_{};     ///< Flag to stop phone update thread.
     std::atomic<bool> button_state_valid_{true};      ///< Flag indicating lamp field validity.
     std::condition_variable button_state_cv_;         ///< Condition variable to trigger phone state update.
-    std::unique_ptr<HandsetCache> handset_cache_;     ///< Cache of active handsets on the system.
+    std::unique_ptr<DeskphoneCache> handset_cache_;     ///< Cache of active handsets on the system.
     std::shared_ptr<LampFieldState> cached_state_;    ///< Cached lamp field state.
     std::mutex cached_state_mut_;                     ///< Mutex protecting cached lamp field state.
 };

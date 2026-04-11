@@ -9,9 +9,8 @@
 
 using namespace xml::yealink;
 
-Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider,
-                                                   std::chrono::minutes expiry)
-    : phonebook_provider_(std::move(phonebook_provider))
+Phonebook::Phonebook(std::shared_ptr<phonebook::Adapter> phonebook_provider, std::chrono::minutes expiry)
+    : phonebook_adapter_(std::move(phonebook_provider))
     , expiry_(expiry)
 {
 }
@@ -34,8 +33,8 @@ std::string Phonebook::getPhonebookXML()
 
     auto phonebook_xml = xml_doc.append_child("YealinkIPPhoneDirectory");
 
-    assert(phonebook_provider_);
-    auto const phonebook_details = phonebook_provider_->getPhonebookDetails();
+    assert(phonebook_adapter_);
+    auto const phonebook_details = phonebook_adapter_->getPhonebookDetails();
     for (auto const &phonebook_detail : phonebook_details) {
         auto dir_entry_xml = phonebook_xml.append_child("DirectoryEntry");
         // Add name

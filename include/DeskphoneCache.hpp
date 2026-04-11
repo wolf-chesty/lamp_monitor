@@ -12,13 +12,12 @@
 #include <thread>
 #include <vector>
 
-/// @class HandsetCache
+/// @class DeskphoneCache
 ///
-/// @brief Maintains a collection of active deskphones on the Asterisk server.
+/// @brief Object that maintains a collection of active deskphones on the Asterisk server.
 ///
-/// This object maintains the details for the active deskphones on the Asterisk server. Deskphones added to this object
-/// will expire from the list of active deskphones.
-class HandsetCache {
+/// This object maintains the details for the active deskphones on the Asterisk server.
+class DeskphoneCache {
 public:
     using clock_t = std::chrono::steady_clock;
     using time_point_t = clock_t::time_point;
@@ -34,8 +33,8 @@ protected:
     };
 
 public:
-    explicit HandsetCache(std::string_view filename, std::chrono::milliseconds expiry);
-    ~HandsetCache();
+    explicit DeskphoneCache(std::string_view filename, std::chrono::milliseconds expiry);
+    ~DeskphoneCache();
 
     /// @brief Adds deskphone details to the cache.
     ///

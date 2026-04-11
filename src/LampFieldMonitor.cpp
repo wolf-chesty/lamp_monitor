@@ -9,7 +9,7 @@
 #include <fmt/core.h>
 #include <sstream>
 
-LampFieldMonitor::LampFieldMonitor(std::unique_ptr<HandsetCache> handset_cache,
+LampFieldMonitor::LampFieldMonitor(std::unique_ptr<DeskphoneCache> handset_cache,
                                    std::shared_ptr<cpp_ami::Connection> io_conn)
     : io_conn_(std::move(io_conn))
     , handset_cache_(std::move(handset_cache))
