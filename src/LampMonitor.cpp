@@ -11,7 +11,6 @@ LampMonitor::LampMonitor(std::shared_ptr<cpp_ami::Connection> io_conn, uint8_t b
     , button_id_(button_id)
     , button_on_(button_on)
 {
-    assert(io_conn_);
 }
 
 std::shared_ptr<cpp_ami::Connection> LampMonitor::getAMIConnection() const
