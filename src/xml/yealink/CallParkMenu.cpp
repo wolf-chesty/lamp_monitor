@@ -127,7 +127,7 @@ std::string CallParkMenu::getParkedCallDetails(std::string const &park_exten) co
         message = fmt::format("Caller: {}\n", event["ParkeeCallerIDName"]) +
                   fmt::format("Number: {}\n", event["ParkeeCallerIDNum"]) +
                   fmt::format("Parking Space: {}\n", park_exten) +
-                  fmt::format("Duration: {} s", event["ParkingDuration"]);
+                  fmt::format("Duration: {}s", event["ParkingDuration"]);
         return true;
     });
 
