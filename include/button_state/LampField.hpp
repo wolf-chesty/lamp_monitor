@@ -4,27 +4,25 @@
 #ifndef LAMP_STATE_LAMP_FIELD_HPP
 #define LAMP_STATE_LAMP_FIELD_HPP
 
-#include "lamp_state/PhoneButton.hpp"
+#include "button_state/PhoneButton.hpp"
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
-namespace lamp_state {
+namespace button_state {
 
 class LampFieldObserver;
 
 /// @class LampField
-/// @namespace lamp_state
+/// @namespace button_state
 ///
 /// @brief Object that observes the state of \c PhoneButton objects.
 ///
-/// This object holds multiple \c PhoneButton objects and will monitor them for state changes. Upon a phone button state
-/// change this object will notify any \c LampFieldObserver objects that are observing this object of the button state
-/// change.
+/// Objects of this type hold multiple \c PhoneButton objects and will monitor them for state change(s). Upon a  button
+/// state change this object will notify any \c LampFieldObserver objects that are observing this object of new button
+/// state(s).
 class LampField : public std::enable_shared_from_this<LampField> {
-    friend class LampFieldObserver;
     friend class PhoneButton;
 
 public:
@@ -53,17 +51,17 @@ public:
     /// @return Collection of button objects monitored by this object.
     std::vector<std::shared_ptr<PhoneButton>> getButtons();
 
-protected:
     /// @brief Registers \c observer to this object.
     ///
     /// @param observer New observer of this object.
-    void registerObserver(LampFieldObserver *observer);
+    void registerObserver(std::shared_ptr<LampFieldObserver> const &observer);
 
     /// @brief Unregisters \c observer from this object.
     ///
     /// @param observer Observer to remove from this object.
-    void unregisterObserver(LampFieldObserver *observer);
+    void unregisterObserver(std::shared_ptr<LampFieldObserver> const &observer);
 
+protected:
     /// @brief Invalidates the lamp field object.
     ///
     /// @param button_id ID of button that invalidated the object.
@@ -73,11 +71,11 @@ protected:
 
 private:
     std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_; ///< Collection of observed buttons.
-    std::mutex buttons_mut_;                            ///< Mutex controlling access to button collection.
-    std::unordered_set<LampFieldObserver *> observers_; ///< Collection of observers monitoring this object.
-    std::mutex observers_mut_;                          ///< Mutex controlling access to observer objects.
+    std::shared_mutex buttons_mut_;             ///< Mutex controlling access to button collection.
+    std::weak_ptr<LampFieldObserver> observer_; ///< Pointer to observer of this object.
+    std::shared_mutex observer_mut_;            ///< Mutex controlling access to observer objects.
 };
 
-} // namespace lamp_state
+} // namespace button_state
 
 #endif

@@ -8,7 +8,7 @@
 
 using namespace monitor;
 
-ParkButton::ParkButton(std::shared_ptr<lamp_state::PhoneButton> phone_button,
+ParkButton::ParkButton(std::shared_ptr<button_state::PhoneButton> phone_button,
                        std::shared_ptr<cpp_ami::Connection> io_conn)
     : phone_button_(std::move(phone_button))
     , io_conn_(std::move(io_conn))

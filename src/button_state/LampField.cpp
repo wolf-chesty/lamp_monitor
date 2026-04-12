@@ -1,28 +1,38 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "lamp_state/LampField.hpp"
+#include "button_state/LampField.hpp"
 
-#include "lamp_state/LampFieldObserver.hpp"
+#include "button_state/LampFieldObserver.hpp"
 #include <cassert>
 #include <execution>
 
-using namespace lamp_state;
+using namespace button_state;
 
-void LampField::registerObserver(LampFieldObserver *observer)
+void LampField::registerObserver(std::shared_ptr<LampFieldObserver> const &observer)
 {
     assert(observer);
-    std::lock_guard const lock(observers_mut_);
-    observers_.emplace(observer);
 
-    observer->invalidate(getButtons());
+    std::lock_guard const lock(observer_mut_);
+    if (auto const curr_observer = observer_.lock(); curr_observer != observer) {
+        observer_ = observer;
+        observer->setLampField(shared_from_this());
+        observer->invalidate(getButtons());
+
+        if (curr_observer) {
+            curr_observer->resetLampField();
+        }
+    }
 }
 
-void LampField::unregisterObserver(LampFieldObserver *observer)
+void LampField::unregisterObserver(std::shared_ptr<LampFieldObserver> const &observer)
 {
     assert(observer);
-    std::lock_guard const lock(observers_mut_);
-    observers_.erase(observer);
+
+    std::lock_guard const lock(observer_mut_);
+    if (auto const curr_observer = observer_.lock(); curr_observer == observer) {
+        observer_.reset();
+    }
 }
 
 /// This function will create new phone buttons in the case where a phone button with \c button_id doesn't exist. In the
@@ -49,7 +59,7 @@ void LampField::removeButton(uint16_t const button_id)
 
 std::vector<std::shared_ptr<PhoneButton>> LampField::getButtons()
 {
-    std::lock_guard const lock(buttons_mut_);
+    std::shared_lock const lock(buttons_mut_);
     std::vector<std::shared_ptr<PhoneButton>> buttons;
     std::ranges::transform(buttons_.begin(), buttons_.end(), std::back_inserter(buttons),
                            [](auto const &itr) -> std::shared_ptr<PhoneButton> { return itr.second; });
@@ -58,7 +68,8 @@ std::vector<std::shared_ptr<PhoneButton>> LampField::getButtons()
 
 void LampField::invalidate(uint16_t const button_id)
 {
-    std::lock_guard const lock(observers_mut_);
-    std::for_each(std::execution::par, observers_.begin(), observers_.end(),
-                  [buttons = getButtons()](auto const &observer) -> void { observer->invalidate(buttons); });
+    std::shared_lock const lock(observer_mut_);
+    if (auto const observer = observer_.lock()) {
+        observer->invalidate(getButtons());
+    }
 }

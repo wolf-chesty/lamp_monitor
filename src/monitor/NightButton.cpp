@@ -8,7 +8,7 @@
 
 using namespace monitor;
 
-NightButton::NightButton(std::shared_ptr<lamp_state::PhoneButton> phone_button,
+NightButton::NightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
                          std::shared_ptr<cpp_ami::Connection> io_conn, std::string night_exten, std::string context,
                          std::string device)
     : phone_button_(std::move(phone_button))
@@ -25,7 +25,7 @@ NightButton::NightButton(std::shared_ptr<lamp_state::PhoneButton> phone_button,
     // Asterisk will return a list of ExtensionStatus events upon receiving an ExtensionStateList action. Just have
     // Asterisk send the list so this objects event handler can take care of the event(s).
     cpp_ami::action::ExtensionStateList const action;
-    io_conn->asyncInvoke(action);
+    io_conn_->asyncInvoke(action);
 }
 
 NightButton::~NightButton()
@@ -71,7 +71,7 @@ std::string const &NightButton::getDevice()
     return device_;
 }
 
-std::shared_ptr<lamp_state::PhoneButton> NightButton::getPhoneButton()
+std::shared_ptr<button_state::PhoneButton> NightButton::getPhoneButton()
 {
     return phone_button_;
 }

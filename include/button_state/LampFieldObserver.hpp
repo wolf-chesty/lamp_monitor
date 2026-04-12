@@ -4,23 +4,27 @@
 #ifndef LAMP_STATE_LAMP_FIELD_OBSERVER_HPP
 #define LAMP_STATE_LAMP_FIELD_OBSERVER_HPP
 
-#include "lamp_state/LampField.hpp"
-#include "lamp_state/PhoneButton.hpp"
+#include "button_state/PhoneButton.hpp"
 #include <memory>
+#include <shared_mutex>
 #include <vector>
 
-namespace lamp_state {
+namespace button_state {
+
+class LampField;
 
 /// @class LampFieldObserver
-/// @namespace lamp_state
+/// @namespace button_state
 ///
 /// @brief Objects of this type will be notified of button state changes for buttons that belong to the lamp field.
 class LampFieldObserver {
-public:
-    explicit LampFieldObserver(std::shared_ptr<LampField> lamp_field);
-    virtual ~LampFieldObserver();
+    friend class LampField;
 
-    /// @brief Function that is invoked whenever a button in the lamp field has had its state changed.
+public:
+    LampFieldObserver() = default;
+    virtual ~LampFieldObserver() = default;
+
+    /// @brief Function that is invoked whenever a button in the lamp field has its state changed.
     ///
     /// @param buttons Collection of buttons in the lamp field.
     virtual void invalidate(std::vector<std::shared_ptr<PhoneButton>> const &buttons) = 0;
@@ -32,9 +36,18 @@ protected:
     std::vector<std::shared_ptr<PhoneButton>> getButtons();
 
 private:
+    /// @brief Attaches this object to the \c lamp_field object.
+    ///
+    /// @param lamp_field Lamp field to attach this object to.
+    void setLampField(std::shared_ptr<LampField> const &lamp_field);
+
+    /// @brief Detaches this object from its observed lamp field.
+    void resetLampField();
+
     std::shared_ptr<LampField> lamp_field_; ///< Pointer to lamp field object being monitored.
+    std::shared_mutex lamp_field_mut_;      ///< Mutex on lamp field pointer.
 };
 
-} // namespace lamp_state
+} // namespace button_state
 
 #endif

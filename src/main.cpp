@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 #include "ApplicationParameters.hpp"
-#include "LampFieldMonitor.hpp"
-#include "NightLampMonitor.hpp"
-#include "ParkedCallMonitor.hpp"
+#include "button_state/LampField.hpp"
+#include "monitor/Deskphone.hpp"
+#include "monitor/NightButton.hpp"
+#include "monitor/ParkButton.hpp"
+#include "monitor/PhoneUIAdapter.hpp"
 #include "phonebook/PjsipWizardAdapter.hpp"
 #include "xml/yealink/CallParkMenu.hpp"
-#include "xml/yealink/XMLPhonebook.hpp"
+#include "xml/yealink/HttpNightButton.hpp"
+#include "xml/yealink/XmlPhonebook.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -156,103 +159,106 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
     return work_thread;
 }
 
-/// @brief Craetes lamp field monitor object.
+/// @brief Creates deskphone cache object.
 ///
-/// @param http_server Pointer to HTTP server to bind URI's to.
-/// @param io_conn Pointer to Asterisk AMI connection.
-/// @param cfg_ini INI configuration object.
-/// @param lamp_monitors Collection of lamp monitors that make up the lamp field.
-void createLampFieldMonitor(std::unique_ptr<httplib::Server> const &http_server,
-                            std::shared_ptr<cpp_ami::Connection> const &io_conn, ini::IniFile &cfg_ini,
-                            std::list<std::shared_ptr<LampMonitor>> const &lamp_monitors)
+/// @param cfg_ini Object containing configuration information.
+///
+/// @return Pointer to deskphone cache object.
+std::shared_ptr<DeskphoneCache> createDeskphoneCache(ini::IniFile &cfg_ini)
 {
-    // Create deskphone cache
     auto const db_filename = cfg_ini["handset_cache"]["filename"].as<std::string>();
     auto const db_expiry = cfg_ini["handset_cache"]["expiry"].as<uint32_t>();
-    auto deskphone_cache = std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
-    // Create lamp field monitor
-    auto lamp_field_monitor = std::make_shared<LampFieldMonitor>(std::move(deskphone_cache), io_conn);
-    lamp_field_monitor->addLamps(lamp_monitors);
+    return std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
+}
+
+void setupEndpointAdapter(std::unique_ptr<httplib::Server> const &http_server, ini::IniFile &cfg_ini,
+                          std::shared_ptr<DeskphoneCache> const &deskphone_cache,
+                          std::shared_ptr<monitor::Deskphone> const &deskphone)
+{
+    // Attach UI adapter to deskphone
+    auto const phone_ui = std::make_shared<monitor::PhoneUIAdapter>();
+    deskphone->registerPhoneAdapter(phone_ui);
 
     // Bind URI to get current lamp settings
     auto const blf_state_uri = cfg_ini["http_server"]["blf_state_uri"].as<std::string>();
-    http_server->Get(blf_state_uri, [lamp_field_monitor](httplib::Request const &req, httplib::Response &res) -> void {
-        // Remove requesting deskphone from cache
-        if (req.has_param("aor") && req.has_param("ip")) {
-            lamp_field_monitor->invalidateAOR(req.get_param_value("aor"), req.get_param_value("ip"));
-        }
-
-        // Publish current lamp field button state
-        auto const state = lamp_field_monitor->getCachedButtonState();
-        res.set_content(state->toString(), "text/xml");
-    });
+    http_server->Get(blf_state_uri,
+                     [deskphone_cache, phone_ui](httplib::Request const &req, httplib::Response &res) -> void {
+                         // Remove requesting deskphone from cache
+                         if (req.has_param("aor") && req.has_param("ip")) {
+                             deskphone_cache->deleteEndpoint(req.get_param_value("aor"), req.get_param_value("ip"));
+                         }
+                         // Return current deskphone state
+                         res.set_content(phone_ui->toString(), "text/xml");
+                     });
 }
 
-/// @brief Creates night lamp monitor object.
+/// @brief Creates night button object.
 ///
-/// @param http_server Pointer to HTTP server to bind URI's to.
+/// @param lamp_field Button factory.
 /// @param io_conn Pointer to Asterisk AMI connection.
+/// @param http_server Pointer to HTTP server to bind URI's to.
 /// @param cfg_ini INI configuration object.
-///
-/// @return Pointer to night lamp monitor object.
-std::shared_ptr<LampMonitor> createNightLampMonitor(std::unique_ptr<httplib::Server> const &http_server,
-                                                    std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                    ini::IniFile &cfg_ini)
+std::unique_ptr<monitor::NightButton> createNightButton(std::shared_ptr<button_state::LampField> const &lamp_field,
+                                                        std::shared_ptr<cpp_ami::Connection> const &io_conn,
+                                                        std::unique_ptr<httplib::Server> const &http_server,
+                                                        ini::IniFile &cfg_ini)
 {
-    auto const night_button_id = cfg_ini["night_button"]["button_id"].as<unsigned int>();
-    auto const night_exten = cfg_ini["night_button"]["exten"].as<std::string>();
-    auto const night_context = cfg_ini["night_button"]["context"].as<std::string>();
-    auto const night_device = cfg_ini["night_button"]["device"].as<std::string>();
-    auto night_lamp_monitor =
-        std::make_shared<NightLampMonitor>(io_conn, night_button_id, night_exten, night_context, night_device);
-
-    // Bind URI to change night mode
+    // Setup XML browser
+    auto const button_id = cfg_ini["night_button"]["button_id"].as<unsigned int>();
+    auto const device = cfg_ini["night_button"]["device"].as<std::string>();
+    auto const button_state = lamp_field->getButton(button_id, button_state::PhoneButton::Color::Red, false);
+    auto const http_button = std::make_shared<xml::yealink::HTTPNightButton>(button_state, io_conn, device);
+    // Bind URI to HTTP night button interface
     auto const night_uri = cfg_ini["http_server"]["night_uri"].as<std::string>();
-    http_server->Get(
-        night_uri, [night_lamp_monitor]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-            res.set_content(night_lamp_monitor->resetNightState(), "text/xml");
-        });
+    http_server->Get(night_uri,
+                     [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                         res.set_content(http_button->pushButton(), "text/xml");
+                     });
 
-    return night_lamp_monitor;
+    // Hook night button to Asterisk
+    auto const exten = cfg_ini["night_button"]["exten"].as<std::string>();
+    auto const context = cfg_ini["night_button"]["context"].as<std::string>();
+    return std::make_unique<monitor::NightButton>(button_state, io_conn, exten, context, device);
 }
 
-/// @brief Creates park lamp monitor object.
+/// @brief Creates park button.
 ///
-/// @param http_server Pointer to HTTP server to bind URI's to.
+/// @param lamp_field Button factory.
 /// @param io_conn Pointer to Asterisk AMI connection.
+/// @param http_server Pointer to HTTP server to bind URI's to.
 /// @param cfg_ini INI configuration object.
-///
-/// @return Pointer to call park lamp monitor object.
-std::shared_ptr<LampMonitor> createParkLampMonitor(std::unique_ptr<httplib::Server> const &http_server,
-                                                   std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                   ini::IniFile &cfg_ini)
+std::unique_ptr<monitor::ParkButton> createParkButton(std::shared_ptr<button_state::LampField> const &lamp_field,
+                                                      std::shared_ptr<cpp_ami::Connection> const &io_conn,
+                                                      std::unique_ptr<httplib::Server> const &http_server,
+                                                      ini::IniFile &cfg_ini)
 {
-    auto const park_button_id = cfg_ini["park_button"]["button_id"].as<unsigned int>();
+    // Setup XML browser interface
     auto const http_url = cfg_ini["http_server"]["url"].as<std::string>();
     auto const park_info_uri = cfg_ini["http_server"]["park_info_uri"].as<std::string>();
-    auto park_lamp_monitor = std::make_shared<ParkedCallMonitor>(io_conn, park_button_id);
-    auto parked_call_menu = std::make_shared<xml::yealink::CallParkMenu>(io_conn, http_url + park_info_uri);
-
-    // Bind URI to get list of parked calls
+    auto const parked_call_menu = std::make_shared<xml::yealink::CallParkMenu>(io_conn, http_url + park_info_uri);
+    // Parked call list handler
     auto const park_list_uri = cfg_ini["http_server"]["park_list_uri"].as<std::string>();
     http_server->Get(park_list_uri,
                      [parked_call_menu]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
                          res.set_content(parked_call_menu->getParkedCallMenu(), "text/xml");
                      });
-
-    // Bind URI to get parked call info
+    // Parked call info handler
     http_server->Get(park_info_uri, [parked_call_menu](httplib::Request const &req, httplib::Response &res) -> void {
+        // Serve parked call details
         if (req.has_param("selection")) {
             res.set_content(parked_call_menu->getParkedCallDetails(req.get_param_value("selection")), "text/xml");
             return;
         }
-
+        // Warn of missing parameters
         static auto const error_xml = parked_call_menu->createMessageXML(true, 5, "Missing Extension Parameter",
                                                                          "Missing URL parameter '&selection=xxx'.");
         res.set_content(error_xml, "text/xml");
     });
 
-    return park_lamp_monitor;
+    // Hook night button to Asterisk
+    auto const button_id = cfg_ini["park_button"]["button_id"].as<unsigned int>();
+    auto const button_state = lamp_field->getButton(button_id, button_state::PhoneButton::Color::Red, true);
+    return std::make_unique<monitor::ParkButton>(button_state, io_conn);
 }
 
 /// @brief Creates and configures the phonebook service for the application.
@@ -263,14 +269,14 @@ std::shared_ptr<LampMonitor> createParkLampMonitor(std::unique_ptr<httplib::Serv
 void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_server,
                                std::shared_ptr<cpp_ami::Connection> const &io_conn, ini::IniFile &cfg_ini)
 {
-    auto phonebook_provider = std::make_shared<phonebook::PJSIPWizardAdapter>(io_conn, "local-phone");
+    auto phonebook_adapter = std::make_shared<phonebook::PJSIPWizardAdapter>(io_conn, "local-phone");
 
     // Setup Yealink phonebook URI
-    auto const yealink_phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
-    auto yealink_phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_provider, std::chrono::minutes(60));
-    http_server->Get(yealink_phonebook_uri,
-                     [yealink_phonebook](httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(yealink_phonebook->getPhonebookString(), "text/xml");
+    auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
+    auto const phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_adapter, std::chrono::minutes(60));
+    http_server->Get(phonebook_uri,
+                     [phonebook]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                         res.set_content(phonebook->getPhonebookString(), "text/xml");
                      });
 }
 
@@ -290,12 +296,18 @@ void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> c
 
     // Create phonebook service
     configurePhonebookService(g_server, io_conn, cfg_ini);
-    // Create monitor for the night button
-    auto night_lamp_monitor = createNightLampMonitor(g_server, io_conn, cfg_ini);
-    // Create monitor for the parking button
-    auto park_lamp_monitor = createParkLampMonitor(g_server, io_conn, cfg_ini);
-    // Create lamp field monitor
-    createLampFieldMonitor(g_server, io_conn, cfg_ini, {night_lamp_monitor, park_lamp_monitor});
+
+    // Setup up application buttons
+    auto const lamp_field = std::make_shared<button_state::LampField>();
+    auto const night_button = createNightButton(lamp_field, io_conn, g_server, cfg_ini);
+    auto const park_button = createParkButton(lamp_field, io_conn, g_server, cfg_ini);
+
+    // Create deskphone connected to Asterisk
+    auto const deskphone_cache = createDeskphoneCache(cfg_ini);
+    auto const deskphone = std::make_shared<monitor::Deskphone>(deskphone_cache, io_conn);
+    // Attach buttons to deskphone
+    lamp_field->registerObserver(deskphone);
+    setupEndpointAdapter(g_server, cfg_ini, deskphone_cache, deskphone);
 
     // httplib::Server::listen is a blocking call
     auto const http_addr = cfg_ini["http_server"]["addr"].as<std::string>();

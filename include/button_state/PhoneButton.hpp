@@ -7,18 +7,19 @@
 #include <atomic>
 #include <memory>
 
-namespace lamp_state {
+namespace button_state {
 
 class LampField;
 
 /// @class PhoneButton
-/// @namespace lamp_state
+/// @namespace button_state
 ///
 /// @brief Represents the button state on a deskphone.
 class PhoneButton {
-    friend class LampField;
-
 public:
+    /// @enum Color
+    ///
+    /// @brief Represents the different button colors.
     enum class Color { Red, Green, Blue };
 
 public:
@@ -51,9 +52,7 @@ public:
     /// @brief Sets the button state.
     ///
     /// @param on \c true if button state should be set to on.
-    ///
-    /// @return Previous button state.
-    bool setOn(bool const on);
+    void setOn(bool const on);
 
     /// @brief Returns \c true if the button is critical and updates should occur.
     ///
@@ -62,20 +61,18 @@ public:
 
     /// @brief Sets the buttons critical state.
     ///
-    /// @return Previous critical flag for the button.
-    bool setIsCritical(bool const update_required);
+    /// @param is_critical New critical state.
+    void setIsCritical(bool const is_critical);
 
     /// @brief Sets the buttons on and critical state.
     ///
     /// @param is_on Flag indicating if the button should be in the on state.
     /// @param is_critical Flag indicating if the button should be in the critical state.
-    ///
-    /// @return \c true if phone state was updated.
-    bool setState(bool const is_on, bool const is_critical);
+    void setState(bool const is_on, bool const is_critical);
 
 protected:
     /// @brief Updates the lamp field with the new button state.
-    void updateLampField();
+    void triggerLampFieldUpdate();
 
 private:
     std::shared_ptr<LampField> lamp_field_; ///< Pointer to lamp field that monitors this button.

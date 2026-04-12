@@ -66,24 +66,20 @@ target_link_libraries(lamp_monitor
 
 target_sources(lamp_monitor
     PRIVATE
-    src/lamp_state/LampField.cpp
-    src/lamp_state/LampFieldObserver.cpp
-    src/lamp_state/PhoneButton.cpp
-    src/monitor/yealink/LampField.cpp
-    src/monitor/yealink/NightButton.cpp
+    src/button_state/LampField.cpp
+    src/button_state/LampFieldObserver.cpp
+    src/button_state/PhoneButton.cpp
+    src/monitor/Deskphone.cpp
     src/monitor/NightButton.cpp
     src/monitor/ParkButton.cpp
+    src/monitor/PhoneUIAdapter.cpp
+    src/monitor/PhoneUIState.cpp
     src/phonebook/PhonebookStringCreator.cpp
     src/phonebook/PjsipWizardAdapter.cpp
     src/xml/yealink/CallParkMenu.cpp
-    src/xml/yealink/XMLPhonebook.cpp
+    src/xml/yealink/HttpNightButton.cpp
+    src/xml/yealink/XmlPhonebook.cpp
     src/DeskphoneCache.cpp
-    src/LampFieldMonitor.cpp
-    src/LampFieldState.cpp
-    src/LampMonitor.cpp
-    src/NightLampMonitor.cpp
-    src/NightLampState.cpp
-    src/ParkedCallMonitor.cpp
     src/main.cpp
 )
 
