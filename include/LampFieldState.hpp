@@ -13,20 +13,21 @@
 /// @brief Object contains the current lamp field state for deskphones.
 class LampFieldState {
 public:
-    explicit LampFieldState(pugi::xml_document xml, bool force_update);
+    explicit LampFieldState(pugi::xml_document xml, bool is_critical);
     ~LampFieldState() = default;
 
     pugi::xml_document const &getXML() const;
 
-    std::string getXMLString();
+    std::string toString();
+    static std::string toString(pugi::xml_document const &xml);
 
-    bool forceUpdate() const;
+    bool isCritical() const;
 
 private:
-    pugi::xml_document xml_;   ///< XML containing lamp field state.
-    bool force_update_{false}; ///< Flag indicating XML should be pushed to deskphones.
-    std::mutex xml_str_mut_;   ///< Cached XML string representation of lamp field state XML.
-    std::string xml_str_;      ///< Mutex controlling access to cached XML string.
+    pugi::xml_document xml_;  ///< XML containing lamp field state.
+    bool is_critical_{false}; ///< Flag indicating XML should be pushed to deskphones.
+    std::mutex xml_str_mut_;  ///< Cached XML string representation of lamp field state XML.
+    std::string xml_str_;     ///< Mutex controlling access to cached XML string.
 };
 
 #endif

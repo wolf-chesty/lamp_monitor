@@ -53,8 +53,8 @@ void LampFieldMonitor::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (event["Service"] == "PJSIP") {
         auto const &aor = event["AccountID"];
         auto const state = getCachedButtonState();
-        if (handset_cache_->addEndpoint(aor, event["RemoteAddress"]) || state->forceUpdate()) {
-            publishButtonState(aor, state->getXMLString());
+        if (handset_cache_->addEndpoint(aor, event["RemoteAddress"]) || state->isCritical()) {
+            publishButtonState(aor, state->toString());
         }
     }
 }
@@ -147,7 +147,7 @@ void LampFieldMonitor::workThread()
 
         if (update_needed && button_state_thread_run_) {
             auto const state = cacheButtonState(getButtonState());
-            publishButtonState(state->getXMLString());
+            publishButtonState(state->toString());
         }
     }
 }

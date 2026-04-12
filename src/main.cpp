@@ -7,7 +7,7 @@
 #include "ParkedCallMonitor.hpp"
 #include "phonebook/PjsipWizardAdapter.hpp"
 #include "xml/yealink/CallParkMenu.hpp"
-#include "xml/yealink/Phonebook.hpp"
+#include "xml/yealink/XMLPhonebook.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -184,7 +184,7 @@ void createLampFieldMonitor(std::unique_ptr<httplib::Server> const &http_server,
 
         // Publish current lamp field button state
         auto const state = lamp_field_monitor->getCachedButtonState();
-        res.set_content(state->getXMLString(), "text/xml");
+        res.set_content(state->toString(), "text/xml");
     });
 }
 
@@ -267,10 +267,10 @@ void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_serv
 
     // Setup Yealink phonebook URI
     auto const yealink_phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
-    auto yealink_phonebook = std::make_shared<xml::yealink::Phonebook>(phonebook_provider, std::chrono::minutes(60));
+    auto yealink_phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_provider, std::chrono::minutes(60));
     http_server->Get(yealink_phonebook_uri,
                      [yealink_phonebook](httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(yealink_phonebook->getPhonebookXML(), "text/xml");
+                         res.set_content(yealink_phonebook->getPhonebookString(), "text/xml");
                      });
 }
 

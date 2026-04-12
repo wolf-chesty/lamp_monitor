@@ -15,9 +15,6 @@ namespace phonebook {
 struct CallerIDInfo {
     std::string name;
     std::string number;
-
-    bool operator==(CallerIDInfo const &rhs) const;
-    auto operator<=>(CallerIDInfo const &rhs) const;
 };
 
 } // namespace phonebook

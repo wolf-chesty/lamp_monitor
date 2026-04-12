@@ -5,9 +5,9 @@
 
 #include <sstream>
 
-LampFieldState::LampFieldState(pugi::xml_document xml, bool force_update)
+LampFieldState::LampFieldState(pugi::xml_document xml, bool is_critical)
     : xml_(std::move(xml))
-    , force_update_(force_update)
+    , is_critical_(is_critical)
 {
 }
 
@@ -16,18 +16,23 @@ pugi::xml_document const &LampFieldState::getXML() const
     return xml_;
 }
 
-std::string LampFieldState::getXMLString()
+std::string LampFieldState::toString()
 {
     std::lock_guard const lock(xml_str_mut_);
     if (xml_str_.empty()) {
-        std::ostringstream xml_stream;
-        xml_.save(xml_stream, "", pugi::format_raw);
-        xml_str_ = xml_stream.str();
+        xml_str_ = toString(xml_);
     }
     return xml_str_;
 }
 
-bool LampFieldState::forceUpdate() const
+std::string LampFieldState::toString(pugi::xml_document const &xml)
 {
-    return force_update_;
+    std::ostringstream xml_stream;
+    xml.save(xml_stream, "", pugi::format_raw);
+    return xml_stream.str();
+}
+
+bool LampFieldState::isCritical() const
+{
+    return is_critical_;
 }
