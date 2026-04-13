@@ -15,8 +15,11 @@ namespace ast_bridge {
 /// @class ParkButton
 /// @namespace ast_bridge
 ///
-/// @brief Monitors parked calls on the Asterisk server updating the park buttons state on arrival/departure of parked
-///        calls.
+/// @brief Monitors the Asterisk server for parked call events.
+///
+/// This object acts as an Asterisk to application state bridge. This object will inspect Asterisk AMI event messages
+/// for any state changes in the Asterisk servers parked call space. As calls leave or enter the parked call space, this
+/// object will delegate the state change to the application state button for parking.
 class ParkButton {
 public:
     explicit ParkButton(std::shared_ptr<button_state::PhoneButton> phone_button,
@@ -40,6 +43,6 @@ private:
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Event callback ID.
 };
 
-} // namespace monitor
+} // namespace ast_bridge
 
 #endif

@@ -47,8 +47,9 @@ void Deskphone::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 
     // Grab deskphone adapter; the phone adapter knows how to render the screens for this particular endpoint.
     auto const &aor = event["AccountID"];
-    // Our site currently only has one phone. Perhaps we can determine the UI type from registration details?
-    auto phone_ui = lamp_field_->getPhoneUI("t88w");
+    // Our site currently only has one phone, the Yealink T88W's. Perhaps we can determine the UI type from registration
+    // details?
+    auto const phone_ui = lamp_field_->getPhoneUI("t88w");
     if (!phone_ui) {
         return;
     }

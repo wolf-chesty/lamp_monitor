@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "../include/ast_bridge/Deskphone.hpp"
-#include "../include/ast_bridge/NightButton.hpp"
-#include "../include/ast_bridge/ParkButton.hpp"
 #include "ApplicationParameters.hpp"
+#include "ast_bridge/Deskphone.hpp"
+#include "ast_bridge/NightButton.hpp"
+#include "ast_bridge/ParkButton.hpp"
 #include "button_state/LampField.hpp"
-#include "phonebook/PjsipWizardAdapter.hpp"
+#include "phonebook/adapter/PjsipWizardAdapter.hpp"
 #include "ui/PhoneBridge.hpp"
 #include "xml/yealink/CallParkMenu.hpp"
 #include "xml/yealink/HttpNightButton.hpp"
@@ -273,7 +273,7 @@ std::unique_ptr<ast_bridge::ParkButton> createParkButton(std::shared_ptr<button_
 void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_server,
                                std::shared_ptr<cpp_ami::Connection> const &io_conn, ini::IniFile &cfg_ini)
 {
-    auto phonebook_adapter = std::make_shared<phonebook::PJSIPWizardAdapter>(io_conn, "local-phone");
+    auto phonebook_adapter = std::make_shared<phonebook::adapter::PJSIPWizardAdapter>(io_conn, "local-phone");
 
     // Setup Yealink phonebook URI
     auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();

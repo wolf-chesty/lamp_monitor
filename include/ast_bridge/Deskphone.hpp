@@ -4,8 +4,8 @@
 #ifndef AST_BRIDGE_DESKPHONE_HPP
 #define AST_BRIDGE_DESKPHONE_HPP
 
+#include "cache/DeskphoneCache.hpp"
 #include "button_state/LampField.hpp"
-#include "DeskphoneCache.hpp"
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
 #include <memory>
@@ -16,12 +16,11 @@ namespace ast_bridge {
 /// @class Deskphone
 /// @namespace ast_bridge
 ///
-/// @brief Monitors for deskphone registration events coming from the Asterisk server.
+/// @brief Monitors the Asterisk server for deskphone registration events.
 ///
-/// Objects of this class will monitor Asterisk AMI events for the occurrence of PJSIP registrations. Upon receiving a
-/// new PJSIP registration the object will cache the SIP endpoint and notify the endpoint of the current button state.
-///
-/// Upon button state change this object will notify all deskphone endpoints in the cache of the new button state.
+/// This object acts as an Asterisk to application state bridge. This object will monitor for Asterisk AMI PJSIP
+/// registration events and will update the phone UI of newly registered deskphones. If the deskphone was recently
+/// updated the phones TTL is updated and its UI updated depending on whether the current UI state is critical.
 class Deskphone {
 public:
     explicit Deskphone(std::shared_ptr<DeskphoneCache> deskphone_cache,
@@ -43,6 +42,6 @@ private:
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< AMI callback handler ID.
 };
 
-} // namespace monitor
+} // namespace ast_bridge
 
 #endif

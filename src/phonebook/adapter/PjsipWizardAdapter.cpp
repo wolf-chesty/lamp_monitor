@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "phonebook/PjsipWizardAdapter.hpp"
+#include "phonebook/adapter/PjsipWizardAdapter.hpp"
 
 #include <c++ami/action/GetConfigJson.hpp>
 #include <regex>
 #include <yaml-cpp/yaml.h>
 
-using namespace phonebook;
+using namespace phonebook::adapter;
 
 PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter)
     : io_conn_(std::move(io_conn))
@@ -17,7 +17,7 @@ PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_c
 
 /// Parses the Asterisk pjsip_wizard.conf file, returning the caller ID information for each AOR endpoint found.
 /// Endpoints are filtered by the template setting.
-std::vector<CallerIDInfo> PJSIPWizardAdapter::getPhonebookDetails() const
+std::vector<phonebook::CallerIDInfo> PJSIPWizardAdapter::getPhonebookDetails() const
 {
     std::vector<CallerIDInfo> phonebook_details;
 

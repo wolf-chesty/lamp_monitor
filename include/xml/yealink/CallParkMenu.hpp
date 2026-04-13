@@ -14,6 +14,10 @@ namespace xml::yealink {
 /// @namespace xml::yealink
 ///
 /// @brief This class will create a call park menu for Yealink IP deskphones.
+///
+/// This object can interact with the Asterisk server and return a list of parked phone calls that can be retrieved from
+/// parking using XML compatible with Yealink Android based deskphones. Objects can also create screens to view the
+/// details of parked calls.
 class CallParkMenu {
 public:
     explicit CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parked_call_info_uri);

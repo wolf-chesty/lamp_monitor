@@ -14,6 +14,8 @@ namespace ui {
 /// @namespace ui
 ///
 /// @brief Object contains the current state for deskphone UI.
+///
+/// This object bundles parameters for a phones UI state into a single object.
 class PhoneUIState {
 public:
     explicit PhoneUIState(pugi::xml_document xml, bool is_critical);

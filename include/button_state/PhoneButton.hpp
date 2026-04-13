@@ -14,7 +14,10 @@ class LampField;
 /// @class PhoneButton
 /// @namespace button_state
 ///
-/// @brief Represents the button state on a deskphone.
+/// @brief This object represents a button state of a deskphone.
+///
+/// This object is the application representation of a deskphone button. Each button belongs to a lamp field, and is
+/// responsible for reporting any button state change to the lamp field for further processing.
 class PhoneButton {
 public:
     /// @enum Color
@@ -83,6 +86,6 @@ private:
     std::atomic<bool> button_on_{false};    ///< Current button state.
 };
 
-} // namespace lamp_state
+} // namespace button_state
 
 #endif

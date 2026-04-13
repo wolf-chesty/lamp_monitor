@@ -15,10 +15,11 @@ namespace ast_bridge {
 /// @class NightButton
 /// @namespace ast_bridge
 ///
-/// @brief Monitors the Asterisk server for night button state change.
+/// @brief Monitors the Asterisk server for night state change.
 ///
-/// This object will inspect Asterisk AMI event messages for parking related events and delegate those actions to the
-/// objects phone button for handling by the application.
+/// This object acts as an Asterisk to application state bridge. This object will inspect Asterisk AMI event messages
+/// for state changes in the night device. Once a night device change is detected, this object will delegate the new
+/// state to the application state button for this event.
 class NightButton {
 public:
     explicit NightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
@@ -56,6 +57,6 @@ private:
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Asterisk AMI callback ID.
 };
 
-} // namespace monitor
+} // namespace ast_bridge
 
 #endif

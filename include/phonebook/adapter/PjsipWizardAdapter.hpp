@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef PHONEBOOK_PJSIP_WIZARD_ADAPTER_HPP
-#define PHONEBOOK_PJSIP_WIZARD_ADAPTER_HPP
+#ifndef PHONEBOOK_ADAPTER_PJSIP_WIZARD_ADAPTER_HPP
+#define PHONEBOOK_ADAPTER_PJSIP_WIZARD_ADAPTER_HPP
 
 #include "phonebook/Adapter.hpp"
 
@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-namespace phonebook {
+namespace phonebook::adapter {
 
 /// @class PJSIPWizardAdapter
 /// @namespace phonebook
@@ -25,7 +25,7 @@ public:
     ~PJSIPWizardAdapter() override = default;
 
     /// @brief Returns a collection of caller ID details.
-    std::vector<CallerIDInfo> getPhonebookDetails() const override;
+    std::vector<phonebook::CallerIDInfo> getPhonebookDetails() const override;
 
 private:
     std::shared_ptr<cpp_ami::Connection> io_conn_; ///< Pointer to Asterisk AMI server.

@@ -4,14 +4,14 @@
 #ifndef UI_PHONE_BRIDGE_HPP
 #define UI_PHONE_BRIDGE_HPP
 
-#include "DeskphoneCache.hpp"
+#include "cache/DeskphoneCache.hpp"
 #include <atomic>
 #include <c++ami/action/PjsipNotify.hpp>
 #include <c++ami/Connection.hpp>
 #include <condition_variable>
 #include <string>
-#include <vector>
 #include <thread>
+#include <vector>
 
 namespace ui {
 

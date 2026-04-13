@@ -71,8 +71,9 @@ target_sources(lamp_monitor
     src/ast_bridge/ParkButton.cpp
     src/button_state/LampField.cpp
     src/button_state/PhoneButton.cpp
+    src/cache/DeskphoneCache.cpp
     src/phonebook/PhonebookStringCreator.cpp
-    src/phonebook/PjsipWizardAdapter.cpp
+    src/phonebook/adapter/PjsipWizardAdapter.cpp
     src/ui/PhoneBridge.cpp
     src/ui/PhoneUi.cpp
     src/ui/PhoneUiState.cpp
@@ -80,7 +81,6 @@ target_sources(lamp_monitor
     src/xml/yealink/HttpNightButton.cpp
     src/xml/yealink/PhoneUi.cpp
     src/xml/yealink/XmlPhonebook.cpp
-    src/DeskphoneCache.cpp
     src/main.cpp
 )
 

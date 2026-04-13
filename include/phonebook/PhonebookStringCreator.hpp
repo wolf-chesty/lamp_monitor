@@ -22,6 +22,9 @@ public:
     /// @brief Returns a phonebook string compatible with a deskphone.
     ///
     /// @return String containing phonebook string compatible with a deskphone.
+    ///
+    /// Implementors of this function will need to create a string containing phonebook data that is
+    /// compatible with their deskphone.
     virtual std::string getPhonebookString() = 0;
 
 protected:

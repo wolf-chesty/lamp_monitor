@@ -6,9 +6,12 @@
 
 #include <string>
 
+/// @struct ApplicationParameters
+///
+/// @brief Object contains the parameters for the application.
 struct ApplicationParameters {
-    std::string config_file;
-    bool is_daemon{};
+    std::string config_file; ///< Name of the configuration file.
+    bool is_daemon{};        ///< Flag indicating if the application should run as a daemon.
 };
 
 #endif

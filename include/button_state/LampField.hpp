@@ -17,10 +17,15 @@ namespace button_state {
 /// @class LampField
 /// @namespace button_state
 ///
-/// @brief Object that observes the state of \c PhoneButton objects.
+/// @brief This object represents the current lamp field state of a deskphone.
 ///
-/// This object observes multiple \c PhoneButton objects and will monitor them for state change(s). Upon a button state
-/// change this object will delegate that state change to any phone UI registered to it.
+/// This object is the applications representation of a deskphones lamp field. As such, each deskphone type will need to
+/// have a lamp field object created for that particular device. If deskphones share a button layout, then perhaps lamp
+/// field objects can be shared between deskphones.
+///
+/// This object also has a list of phone UI objects that are responsible for rendering button state of the physical
+/// hardware deskphones. As button states occur this object will use this collection of phone UI objects to render the
+/// current deskphone button state and send that information to each phone on the network.
 class LampField : public std::enable_shared_from_this<LampField> {
     friend class PhoneButton;
 
