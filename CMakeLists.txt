@@ -72,10 +72,10 @@ target_sources(lamp_monitor
     src/monitor/Deskphone.cpp
     src/monitor/NightButton.cpp
     src/monitor/ParkButton.cpp
-    src/monitor/PhoneUiAdapter.cpp
-    src/monitor/PhoneUiState.cpp
     src/phonebook/PhonebookStringCreator.cpp
     src/phonebook/PjsipWizardAdapter.cpp
+    src/ui/PhoneUi.cpp
+    src/ui/PhoneUiState.cpp
     src/xml/yealink/CallParkMenu.cpp
     src/xml/yealink/HttpNightButton.cpp
     src/xml/yealink/PhoneUi.cpp

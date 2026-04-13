@@ -7,7 +7,7 @@
 #include "button_state/LampFieldObserver.hpp"
 
 #include "DeskphoneCache.hpp"
-#include "monitor/PhoneUiAdapter.hpp"
+#include "ui/PhoneUi.hpp"
 #include <atomic>
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
@@ -24,10 +24,10 @@ namespace monitor {
 ///
 /// @brief Monitors for deskphone registration events coming from the Asterisk server.
 ///
-/// Objects of this class will monitor Asterisk AMI events for the occurrence ov PJSIP registrations. Upon receiving a
+/// Objects of this class will monitor Asterisk AMI events for the occurrence of PJSIP registrations. Upon receiving a
 /// new PJSIP registration the object will cache the SIP endpoint and notify the endpoint of the current button state.
 ///
-/// Upon button state change this object will notify all deskphone endpoints of the new button state.
+/// Upon button state change this object will notify all deskphone endpoints in the cache of the new button state.
 ///
 /// Deskphone content rendering is handled by \c PhoneUIAdapter objects. In order to handle phones of varying types a
 /// \c PhoneUIAdapter for the phone should be registered to this object.
@@ -39,12 +39,12 @@ public:
     /// @brief Registers a new phone UI adapter to this object.
     ///
     /// @param ui_adapter Phone UI adapter to register with this object.
-    void registerPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
+    void registerPhoneUI(std::shared_ptr<ui::PhoneUI> const &ui_adapter);
 
     /// @brief Unregisters a phone UI adapter from this object.
     ///
     /// @param ui_adatper Phone UI adapter to unregister from this object.
-    void unregisterPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
+    void unregisterPhoneUI(std::shared_ptr<ui::PhoneUI> const &ui_adapter);
 
     /// @brief Invalidates the states of buttons being monitored by this object.
     ///
@@ -55,7 +55,7 @@ protected:
     /// @brief Returns collection of phone UI adapters for this deskphone.
     ///
     /// @return Pointer to a deskphone UI adapter.
-    std::shared_ptr<PhoneUIAdapter> getPhoneAdapter();
+    std::shared_ptr<ui::PhoneUI> getPhoneAdapter();
 
 private:
     /// @brief Handles AMI events coming from the Asterisk AMI server.
@@ -63,8 +63,8 @@ private:
     /// @param event Event sent by the Asterisk AMI server.
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
-    void publishPhoneState(std::shared_ptr<PhoneUIAdapter> const &phone_adapter);
-    void publishPhoneState(std::string const &aor, std::shared_ptr<PhoneUIAdapter> const &phone_adapter);
+    void publishPhoneState(std::shared_ptr<ui::PhoneUI> const &phone_adapter);
+    void publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_adapter);
 
     void startWorkThread();
     void stopWorkThread();
@@ -73,7 +73,7 @@ private:
     std::shared_ptr<DeskphoneCache> deskphone_cache_;           ///< Deskphone cache.
     std::shared_ptr<cpp_ami::Connection> io_conn_;              ///< Asterisk AMI connection.
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< AMI callback handler ID.
-    std::shared_ptr<PhoneUIAdapter> deskphone_adapter_;         ///< Phone renderers.
+    std::shared_ptr<ui::PhoneUI> deskphone_adapter_;         ///< Phone renderers.
     std::shared_mutex deskphone_adapter_mut_;                   ///< Mutex on phone renderers.
     std::atomic<bool> button_state_valid_{true};
     std::thread work_thread_;

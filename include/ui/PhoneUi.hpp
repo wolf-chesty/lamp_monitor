@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_PHONE_UI_ADAPTER_HPP
-#define MONITOR_PHONE_UI_ADAPTER_HPP
+#ifndef UI_PHONE_UI_HPP
+#define UI_PHONE_UI_HPP
 
 #include "button_state/PhoneButton.hpp"
-#include "monitor/PhoneUiState.hpp"
+#include "PhoneUiState.hpp"
 #include <c++ami/action/PjsipNotify.hpp>
 #include <memory>
 #include <pugixml.hpp>
@@ -13,12 +13,12 @@
 #include <utility>
 #include <vector>
 
-namespace monitor {
+namespace ui {
 
-class PhoneUIAdapter {
+class PhoneUI {
 public:
-    PhoneUIAdapter() = default;
-    virtual ~PhoneUIAdapter() = default;
+    PhoneUI() = default;
+    virtual ~PhoneUI() = default;
 
     void update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons);
 

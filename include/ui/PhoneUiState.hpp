@@ -1,19 +1,19 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_PHONE_UI_STATE_HPP
-#define MONITOR_PHONE_UI_STATE_HPP
+#ifndef UI_PHONE_UI_STATE_HPP
+#define UI_PHONE_UI_STATE_HPP
 
 #include <mutex>
 #include <pugixml.hpp>
 #include <string>
 
-namespace monitor {
+namespace ui {
 
 /// @class PhoneUIState
 /// @namespace monitor
 ///
-/// @brief Object contains the current state for deskphones.
+/// @brief Object contains the current state for deskphone UI.
 class PhoneUIState {
 public:
     explicit PhoneUIState(pugi::xml_document xml, bool is_critical);

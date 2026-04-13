@@ -3,7 +3,7 @@
 
 #include "xml/yealink/PhoneUi.hpp"
 
-#include "monitor/PhoneUiState.hpp"
+#include "ui/PhoneUiState.hpp"
 #include <cassert>
 #include <fmt/core.h>
 
@@ -60,7 +60,7 @@ std::pair<pugi::xml_document, bool>
 std::string PhoneUI::createYealinkXMLString(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
 {
     auto const [xml, _] = createYealinkXML(buttons, false);
-    return monitor::PhoneUIState::toString(xml);
+    return ui::PhoneUIState::toString(xml);
 }
 
 std::pair<pugi::xml_document, bool>

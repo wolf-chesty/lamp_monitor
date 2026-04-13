@@ -63,7 +63,7 @@ void Deskphone::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     }
 }
 
-void Deskphone::registerPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
+void Deskphone::registerPhoneUI(std::shared_ptr<ui::PhoneUI> const &ui_adapter)
 {
     std::lock_guard const lock(deskphone_adapter_mut_);
     if (deskphone_adapter_ != ui_adapter) {
@@ -72,7 +72,7 @@ void Deskphone::registerPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapte
     }
 }
 
-void Deskphone::unregisterPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
+void Deskphone::unregisterPhoneUI(std::shared_ptr<ui::PhoneUI> const &ui_adapter)
 {
     std::lock_guard const lock(deskphone_adapter_mut_);
     if (deskphone_adapter_ == ui_adapter) {
@@ -80,7 +80,7 @@ void Deskphone::unregisterPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adap
     }
 }
 
-std::shared_ptr<PhoneUIAdapter> Deskphone::getPhoneAdapter()
+std::shared_ptr<ui::PhoneUI> Deskphone::getPhoneAdapter()
 {
     std::shared_lock const lock(deskphone_adapter_mut_);
     return deskphone_adapter_;
@@ -128,7 +128,7 @@ void Deskphone::workThread()
     }
 }
 
-void Deskphone::publishPhoneState(std::string const &aor, std::shared_ptr<PhoneUIAdapter> const &phone_adapter)
+void Deskphone::publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_adapter)
 {
     cpp_ami::action::PJSIPNotify action;
     action["Endpoint"] = aor;
@@ -139,7 +139,7 @@ void Deskphone::publishPhoneState(std::string const &aor, std::shared_ptr<PhoneU
     io_conn_->asyncInvoke(action);
 }
 
-void Deskphone::publishPhoneState(std::shared_ptr<PhoneUIAdapter> const &phone_adapter)
+void Deskphone::publishPhoneState(std::shared_ptr<ui::PhoneUI> const &phone_adapter)
 {
     cpp_ami::action::PJSIPNotify action;
     assert(phone_adapter);

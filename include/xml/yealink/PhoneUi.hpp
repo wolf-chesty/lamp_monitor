@@ -4,11 +4,11 @@
 #ifndef XML_YEALINK_PHONE_UI_HPP
 #define XML_YEALINK_PHONE_UI_HPP
 
-#include "monitor/PhoneUiAdapter.hpp"
+#include "ui/PhoneUi.hpp"
 
 namespace xml::yealink {
 
-class PhoneUI : public monitor::PhoneUIAdapter {
+class PhoneUI : public ui::PhoneUI {
 public:
     PhoneUI() = default;
     ~PhoneUI() override = default;
