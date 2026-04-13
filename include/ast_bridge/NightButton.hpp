@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_NIGHT_BUTTON_HPP
-#define MONITOR_NIGHT_BUTTON_HPP
+#ifndef AST_BRIDGE_NIGHT_BUTTON_HPP
+#define AST_BRIDGE_NIGHT_BUTTON_HPP
 
 #include "button_state/PhoneButton.hpp"
 #include <c++ami/Connection.hpp>
@@ -10,10 +10,10 @@
 #include <memory>
 #include <string>
 
-namespace monitor {
+namespace ast_bridge {
 
 /// @class NightButton
-/// @namespace monitor
+/// @namespace ast_bridge
 ///
 /// @brief Monitors the Asterisk server for night button state change.
 ///

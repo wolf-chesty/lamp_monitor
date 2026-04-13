@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_PARK_BUTTON_HPP
-#define MONITOR_PARK_BUTTON_HPP
+#ifndef AST_BRIDGE_PARK_BUTTON_HPP
+#define AST_BRIDGE_PARK_BUTTON_HPP
 
 #include "button_state/PhoneButton.hpp"
 #include <c++ami/Connection.hpp>
@@ -10,10 +10,10 @@
 #include <string>
 #include <unordered_set>
 
-namespace monitor {
+namespace ast_bridge {
 
 /// @class ParkButton
-/// @namespace monitor
+/// @namespace ast_bridge
 ///
 /// @brief Monitors parked calls on the Asterisk server updating the park buttons state on arrival/departure of parked
 ///        calls.

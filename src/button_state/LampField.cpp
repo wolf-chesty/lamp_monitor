@@ -3,36 +3,15 @@
 
 #include "button_state/LampField.hpp"
 
-#include "button_state/LampFieldObserver.hpp"
 #include <cassert>
 #include <execution>
 
 using namespace button_state;
 
-void LampField::registerObserver(std::shared_ptr<LampFieldObserver> const &observer)
+LampField::LampField(std::shared_ptr<ui::PhoneBridge> phone_bridge)
+    : phone_bridge_(std::move(phone_bridge))
 {
-    assert(observer);
-
-    std::lock_guard const lock(observer_mut_);
-    if (auto const curr_observer = observer_.lock(); curr_observer != observer) {
-        observer_ = observer;
-        observer->setLampField(shared_from_this());
-        observer->invalidate(getButtons());
-
-        if (curr_observer) {
-            curr_observer->resetLampField();
-        }
-    }
-}
-
-void LampField::unregisterObserver(std::shared_ptr<LampFieldObserver> const &observer)
-{
-    assert(observer);
-
-    std::lock_guard const lock(observer_mut_);
-    if (auto const curr_observer = observer_.lock(); curr_observer == observer) {
-        observer_.reset();
-    }
+    assert(phone_bridge_);
 }
 
 /// This function will create new phone buttons in the case where a phone button with \c button_id doesn't exist. In the
@@ -68,8 +47,36 @@ std::vector<std::shared_ptr<PhoneButton>> LampField::getButtons()
 
 void LampField::invalidate(uint16_t const button_id)
 {
-    std::shared_lock const lock(observer_mut_);
-    if (auto const observer = observer_.lock()) {
-        observer->invalidate(getButtons());
+    std::shared_lock const lock(phone_uis_mut_);
+    std::for_each(std::execution::par, phone_uis_.begin(), phone_uis_.end(),
+                  [this, buttons = getButtons()](auto const &itr) -> void {
+                      auto const ui = itr.second;
+                      // Update the UI state
+                      ui->update(buttons);
+                      // Publish the UI state to the physical deskphones
+                      cpp_ami::action::PJSIPNotify action;
+                      ui->initialize(action);
+                      phone_bridge_->dispatch(itr.first, std::move(action));
+                  });
+}
+
+void LampField::registerUI(std::string const &ui_name, std::shared_ptr<ui::PhoneUI> const &ui)
+{
+    std::lock_guard const lock(phone_uis_mut_);
+    phone_uis_.emplace(ui_name, ui);
+}
+
+void LampField::unregisterUI(std::string const &ui_name)
+{
+    std::lock_guard const lock(phone_uis_mut_);
+    phone_uis_.erase(ui_name);
+}
+
+std::shared_ptr<ui::PhoneUI> LampField::getPhoneUI(std::string const &ui_name)
+{
+    std::shared_lock const lock(phone_uis_mut_);
+    if (auto const itr = phone_uis_.find(ui_name); itr != phone_uis_.end()) {
+        return itr->second;
     }
+    return nullptr;
 }

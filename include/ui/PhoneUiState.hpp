@@ -11,7 +11,7 @@
 namespace ui {
 
 /// @class PhoneUIState
-/// @namespace monitor
+/// @namespace ui
 ///
 /// @brief Object contains the current state for deskphone UI.
 class PhoneUIState {

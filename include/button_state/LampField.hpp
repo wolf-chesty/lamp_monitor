@@ -5,6 +5,8 @@
 #define BUTTON_STATE_LAMP_FIELD_HPP
 
 #include "button_state/PhoneButton.hpp"
+#include "ui/PhoneBridge.hpp"
+#include "ui/PhoneUi.hpp"
 #include <memory>
 #include <shared_mutex>
 #include <unordered_map>
@@ -12,21 +14,18 @@
 
 namespace button_state {
 
-class LampFieldObserver;
-
 /// @class LampField
 /// @namespace button_state
 ///
 /// @brief Object that observes the state of \c PhoneButton objects.
 ///
-/// Objects of this type hold multiple \c PhoneButton objects and will monitor them for state change(s). Upon a button
-/// state change this object will notify any \c LampFieldObserver objects that are observing this object of new button
-/// state(s).
+/// This object observes multiple \c PhoneButton objects and will monitor them for state change(s). Upon a button state
+/// change this object will delegate that state change to any phone UI registered to it.
 class LampField : public std::enable_shared_from_this<LampField> {
     friend class PhoneButton;
 
 public:
-    LampField() = default;
+    explicit LampField(std::shared_ptr<ui::PhoneBridge> phone_bridge);
     virtual ~LampField() = default;
 
     /// @brief Creates a new phone button that is monitored by this object.
@@ -51,15 +50,23 @@ public:
     /// @return Collection of button objects monitored by this object.
     std::vector<std::shared_ptr<PhoneButton>> getButtons();
 
-    /// @brief Registers \c observer to this object.
+    /// @brief Add phone UI to this lamp field.
     ///
-    /// @param observer New observer of this object.
-    void registerObserver(std::shared_ptr<LampFieldObserver> const &observer);
+    /// @param ui_name Phone name.
+    /// @param ui Phone UI object.
+    void registerUI(std::string const &ui_name, std::shared_ptr<ui::PhoneUI> const &ui);
 
-    /// @brief Unregisters \c observer from this object.
+    /// @brief Remove phone UI from this lamp field.
     ///
-    /// @param observer Observer to remove from this object.
-    void unregisterObserver(std::shared_ptr<LampFieldObserver> const &observer);
+    /// @param ui_name Phone name.
+    void unregisterUI(std::string const &ui_name);
+
+    /// @brief Gets the phone UI for \c ui_name.
+    ///
+    /// @param ui_name Phone UI key.
+    ///
+    /// @return Pointer to phone UI object.
+    std::shared_ptr<ui::PhoneUI> getPhoneUI(std::string const &ui_name);
 
 protected:
     /// @brief Invalidates the lamp field object.
@@ -70,10 +77,11 @@ protected:
     void invalidate(uint16_t const button_id);
 
 private:
-    std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_; ///< Collection of observed buttons.
-    std::shared_mutex buttons_mut_;             ///< Mutex controlling access to button collection.
-    std::weak_ptr<LampFieldObserver> observer_; ///< Pointer to observer of this object.
-    std::shared_mutex observer_mut_;            ///< Mutex controlling access to observer objects.
+    std::shared_ptr<ui::PhoneBridge> phone_bridge_;                           ///< Bridge to update hardware deskphones.
+    std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_;      ///< Collection of observed buttons.
+    std::shared_mutex buttons_mut_;                                           ///< Mutex on button collection.
+    std::unordered_map<std::string, std::shared_ptr<ui::PhoneUI>> phone_uis_; ///< Phone UI's to render this object.
+    std::shared_mutex phone_uis_mut_;                                         ///< Mutex on phone UI collection.
 };
 
 } // namespace button_state

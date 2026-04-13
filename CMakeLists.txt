@@ -66,14 +66,14 @@ target_link_libraries(lamp_monitor
 
 target_sources(lamp_monitor
     PRIVATE
+    src/ast_bridge/Deskphone.cpp
+    src/ast_bridge/NightButton.cpp
+    src/ast_bridge/ParkButton.cpp
     src/button_state/LampField.cpp
-    src/button_state/LampFieldObserver.cpp
     src/button_state/PhoneButton.cpp
-    src/monitor/Deskphone.cpp
-    src/monitor/NightButton.cpp
-    src/monitor/ParkButton.cpp
     src/phonebook/PhonebookStringCreator.cpp
     src/phonebook/PjsipWizardAdapter.cpp
+    src/ui/PhoneBridge.cpp
     src/ui/PhoneUi.cpp
     src/ui/PhoneUiState.cpp
     src/xml/yealink/CallParkMenu.cpp
