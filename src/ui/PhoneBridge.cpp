@@ -53,7 +53,7 @@ void PhoneBridge::workThread()
     while (work_thread_run_) {
         std::unique_lock lock(messages_mut_);
         messages_cv_.wait(lock, [this]() -> bool { return !work_thread_run_ || !messages_.empty(); });
-        messages = std::move(messages);
+        messages = std::move(messages_);
         lock.unlock();
 
         if (!work_thread_run_) {

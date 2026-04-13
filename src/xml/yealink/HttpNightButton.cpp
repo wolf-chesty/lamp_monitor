@@ -5,6 +5,7 @@
 
 #include "xml/yealink/PhoneUi.hpp"
 #include <c++ami/action/Setvar.hpp>
+#include <c++ami/util/ScopeGuard.hpp>
 #include <cassert>
 #include <fmt/core.h>
 
@@ -25,12 +26,15 @@ std::string HTTPNightButton::pushButton()
     assert(button_);
     auto const button_on = !button_->isOn();
 
-    // Update device state on Asterisk server
-    assert(io_conn_);
-    cpp_ami::action::Setvar action;
-    action["Variable"] = fmt::format("DEVICE_STATE({})", device_);
-    action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
-    io_conn_->asyncInvoke(action);
+    cpp_ami::util::ScopeGuard const send_message(
+        [io_conn = io_conn_, device = device_, button_on]() -> void {
+            // Update device state on Asterisk server
+           assert(io_conn);
+           cpp_ami::action::Setvar action;
+           action["Variable"] = fmt::format("DEVICE_STATE({})", device);
+           action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
+           io_conn->asyncInvoke(action);
+        });
 
     // Return XML for new button state
     auto const inverted_button = std::make_shared<button_state::PhoneButton>(button_->buttonID(), button_->color(),
