@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_YEALINK_LAMP_FIELD_HPP
-#define MONITOR_YEALINK_LAMP_FIELD_HPP
+#ifndef MONITOR_DESKPHONE_HPP
+#define MONITOR_DESKPHONE_HPP
 
 #include "button_state/LampFieldObserver.hpp"
 
 #include "DeskphoneCache.hpp"
-#include "monitor/PhoneUIAdapter.hpp"
+#include "monitor/PhoneUiAdapter.hpp"
 #include <atomic>
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
@@ -39,12 +39,12 @@ public:
     /// @brief Registers a new phone UI adapter to this object.
     ///
     /// @param ui_adapter Phone UI adapter to register with this object.
-    void registerPhoneAdapter(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
+    void registerPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
 
     /// @brief Unregisters a phone UI adapter from this object.
     ///
     /// @param ui_adatper Phone UI adapter to unregister from this object.
-    void unregisterPhoneAdapter(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
+    void unregisterPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter);
 
     /// @brief Invalidates the states of buttons being monitored by this object.
     ///

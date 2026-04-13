@@ -29,10 +29,9 @@ Deskphone::~Deskphone()
 }
 
 /// This callback is invoked for every AMI event that is published by the Asterisk server. This callback will process
-/// SuccessfulAuth events from the PJSIP service. This event type is published every time a phone successfully registers
-/// with the Asterisk server.
-///
-/// Upon successful registration of a deskphone this callback will publish the current lamp states to the phone.
+/// SuccessfulAuth events from the PJSIP service, whenever a deskphone has successfully registered with the Asterisk
+/// server. Upon successful registration of a deskphone this callback will publish the current lamp states to the newly
+/// registered deskphone.
 void Deskphone::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 {
     // Filter for monitored events
@@ -64,7 +63,7 @@ void Deskphone::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     }
 }
 
-void Deskphone::registerPhoneAdapter(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
+void Deskphone::registerPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
 {
     std::lock_guard const lock(deskphone_adapter_mut_);
     if (deskphone_adapter_ != ui_adapter) {
@@ -73,7 +72,7 @@ void Deskphone::registerPhoneAdapter(std::shared_ptr<PhoneUIAdapter> const &ui_a
     }
 }
 
-void Deskphone::unregisterPhoneAdapter(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
+void Deskphone::unregisterPhoneUI(std::shared_ptr<PhoneUIAdapter> const &ui_adapter)
 {
     std::lock_guard const lock(deskphone_adapter_mut_);
     if (deskphone_adapter_ == ui_adapter) {

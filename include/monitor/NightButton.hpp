@@ -16,6 +16,9 @@ namespace monitor {
 /// @namespace monitor
 ///
 /// @brief Monitors the Asterisk server for night button state change.
+///
+/// This object will inspect Asterisk AMI event messages for parking related events and delegate those actions to the
+/// objects phone button for handling by the application.
 class NightButton {
 public:
     explicit NightButton(std::shared_ptr<button_state::PhoneButton> phone_button,

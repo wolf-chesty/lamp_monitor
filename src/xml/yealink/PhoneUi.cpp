@@ -1,54 +1,21 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "monitor/PhoneUIAdapter.hpp"
+#include "xml/yealink/PhoneUi.hpp"
+
+#include "monitor/PhoneUiState.hpp"
 #include <cassert>
 #include <fmt/core.h>
-#include <shared_mutex>
 
-using namespace monitor;
+using namespace xml::yealink;
 
-void PhoneUIAdapter::update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
-{
-    // Create phone state XML from buttons
-    bool critical{};
-    auto xml_doc = createPhoneStateXML(buttons, critical);
-    // Create new phone state object for caching
-    auto const state = std::make_shared<PhoneUIState>(std::move(xml_doc), critical);
-    setPhoneState(state);
-}
-
-std::shared_ptr<PhoneUIState> PhoneUIAdapter::getPhoneState()
-{
-    std::shared_lock const lock(cached_button_state_mut_);
-    return cached_button_state_;
-}
-
-void PhoneUIAdapter::setPhoneState(std::shared_ptr<PhoneUIState> const &state)
-{
-    std::lock_guard const lock(cached_button_state_mut_);
-    cached_button_state_ = state;
-}
-
-std::string PhoneUIAdapter::toString()
-{
-    auto const state = getPhoneState();
-    return state->toString();
-}
-
-bool PhoneUIAdapter::isCritical()
-{
-    auto const state = getPhoneState();
-    return state->isCritical();
-}
-
-void PhoneUIAdapter::initialize(cpp_ami::action::PJSIPNotify &action)
+void PhoneUI::initialize(cpp_ami::action::PJSIPNotify &action)
 {
     action.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
                                   fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(toString()))});
 }
 
-char const *PhoneUIAdapter::toColorString(button_state::PhoneButton::Color const color)
+char const *PhoneUI::toColorString(button_state::PhoneButton::Color const color)
 {
     static constexpr char const *const BUTTON_COLOR_RED = "RED";
     static constexpr char const *const BUTTON_COLOR_GREEN = "GREEN";
@@ -71,7 +38,7 @@ char const *PhoneUIAdapter::toColorString(button_state::PhoneButton::Color const
     return button_color;
 }
 
-char const *PhoneUIAdapter::toButtonStateString(button_state::PhoneButton const &button)
+char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button)
 {
     static constexpr char const *const BUTTON_STATE_OFF = "off";
     static constexpr char const *const BUTTON_STATE_ON = "on";
@@ -84,16 +51,20 @@ char const *PhoneUIAdapter::toButtonStateString(button_state::PhoneButton const 
     return button_state;
 }
 
-pugi::xml_document
-    PhoneUIAdapter::createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
+std::pair<pugi::xml_document, bool>
+    PhoneUI::createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical)
 {
-    bool critical = false;
-    return createPhoneStateXML(buttons, critical);
+    return PhoneUI::createYealinkXML(buttons, critical);
 }
 
-pugi::xml_document
-    PhoneUIAdapter::createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons,
-                                      bool &critical)
+std::string PhoneUI::createYealinkXMLString(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
+{
+    auto const [xml, _] = createYealinkXML(buttons, false);
+    return monitor::PhoneUIState::toString(xml);
+}
+
+std::pair<pugi::xml_document, bool>
+    PhoneUI::createYealinkXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical)
 {
     pugi::xml_document xml_doc;
     auto decl = xml_doc.append_child(pugi::node_declaration);
@@ -113,5 +84,5 @@ pugi::xml_document
     }
     execute_xml.append_attribute("Beep") = critical ? "yes" : "no";
 
-    return xml_doc;
+    return std::make_pair(std::move(xml_doc), critical);
 }

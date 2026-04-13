@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef LAMP_STATE_LAMP_FIELD_OBSERVER_HPP
-#define LAMP_STATE_LAMP_FIELD_OBSERVER_HPP
+#ifndef BUTTON_STATE_LAMP_FIELD_OBSERVER_HPP
+#define BUTTON_STATE_LAMP_FIELD_OBSERVER_HPP
 
 #include "button_state/PhoneButton.hpp"
 #include <memory>
@@ -16,7 +16,7 @@ class LampField;
 /// @class LampFieldObserver
 /// @namespace button_state
 ///
-/// @brief Objects of this type will be notified of button state changes for buttons that belong to the lamp field.
+/// @brief Objects of this type observe a \c LampField and will be notified of any button changes.
 class LampFieldObserver {
     friend class LampField;
 

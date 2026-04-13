@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef LAMP_STATE_LAMP_FIELD_HPP
-#define LAMP_STATE_LAMP_FIELD_HPP
+#ifndef BUTTON_STATE_LAMP_FIELD_HPP
+#define BUTTON_STATE_LAMP_FIELD_HPP
 
 #include "button_state/PhoneButton.hpp"
 #include <memory>
@@ -19,7 +19,7 @@ class LampFieldObserver;
 ///
 /// @brief Object that observes the state of \c PhoneButton objects.
 ///
-/// Objects of this type hold multiple \c PhoneButton objects and will monitor them for state change(s). Upon a  button
+/// Objects of this type hold multiple \c PhoneButton objects and will monitor them for state change(s). Upon a button
 /// state change this object will notify any \c LampFieldObserver objects that are observing this object of new button
 /// state(s).
 class LampField : public std::enable_shared_from_this<LampField> {

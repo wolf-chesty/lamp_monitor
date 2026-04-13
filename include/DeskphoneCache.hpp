@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef HANDSET_CACHE_HPP
-#define HANDSET_CACHE_HPP
+#ifndef DESKPHONE_CACHE_HPP
+#define DESKPHONE_CACHE_HPP
 
 #include <chrono>
 #include <condition_variable>

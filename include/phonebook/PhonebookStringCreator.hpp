@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef XML_PHONEBOOK_HPP
-#define XML_PHONEBOOK_HPP
+#ifndef PHONEBOOK_PHONEBOOK_STRING_CREATOR_HPP
+#define PHONEBOOK_PHONEBOOK_STRING_CREATOR_HPP
 
 #include "phonebook/Adapter.hpp"
 #include <memory>

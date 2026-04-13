@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef LAMP_STATE_PHONE_BUTTON_HPP
-#define LAMP_STATE_PHONE_BUTTON_HPP
+#ifndef BUTTON_STATE_PHONE_BUTTON_HPP
+#define BUTTON_STATE_PHONE_BUTTON_HPP
 
 #include <atomic>
 #include <memory>

@@ -6,7 +6,7 @@
 #include "monitor/Deskphone.hpp"
 #include "monitor/NightButton.hpp"
 #include "monitor/ParkButton.hpp"
-#include "monitor/PhoneUIAdapter.hpp"
+#include "xml/yealink/PhoneUi.hpp"
 #include "phonebook/PjsipWizardAdapter.hpp"
 #include "xml/yealink/CallParkMenu.hpp"
 #include "xml/yealink/HttpNightButton.hpp"
@@ -171,13 +171,19 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(ini::IniFile &cfg_ini)
     return std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
 }
 
+/// @brief Creates a phone UI and attaches it to the deskphone.
+///
+/// @param http_server HTTP server that will interact with the deskphone UI.
+/// @param cfg_ini Object containing configuration parameters.
+/// @param deskphone_cache Deskphone cache.
+/// @param deskphone Object that is monitoring Asterisk AMI events for phone registrations.
 void setupEndpointAdapter(std::unique_ptr<httplib::Server> const &http_server, ini::IniFile &cfg_ini,
                           std::shared_ptr<DeskphoneCache> const &deskphone_cache,
                           std::shared_ptr<monitor::Deskphone> const &deskphone)
 {
     // Attach UI adapter to deskphone
-    auto const phone_ui = std::make_shared<monitor::PhoneUIAdapter>();
-    deskphone->registerPhoneAdapter(phone_ui);
+    auto const phone_ui = std::make_shared<xml::yealink::PhoneUI>();
+    deskphone->registerPhoneUI(phone_ui);
 
     // Bind URI to get current lamp settings
     auto const blf_state_uri = cfg_ini["http_server"]["blf_state_uri"].as<std::string>();

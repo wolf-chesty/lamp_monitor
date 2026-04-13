@@ -1,15 +1,16 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef MONITOR_LAMP_FIELD_ADAPTER_HPP
-#define MONITOR_LAMP_FIELD_ADAPTER_HPP
+#ifndef MONITOR_PHONE_UI_ADAPTER_HPP
+#define MONITOR_PHONE_UI_ADAPTER_HPP
 
 #include "button_state/PhoneButton.hpp"
-#include "monitor/PhoneUIState.hpp"
+#include "monitor/PhoneUiState.hpp"
 #include <c++ami/action/PjsipNotify.hpp>
 #include <memory>
 #include <pugixml.hpp>
 #include <shared_mutex>
+#include <utility>
 #include <vector>
 
 namespace monitor {
@@ -25,22 +26,16 @@ public:
 
     bool isCritical();
 
-    void initialize(cpp_ami::action::PJSIPNotify &action);
-
-    static pugi::xml_document
-        createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons);
+    virtual void initialize(cpp_ami::action::PJSIPNotify &action) = 0;
 
 protected:
     std::shared_ptr<PhoneUIState> getPhoneState();
     void setPhoneState(std::shared_ptr<PhoneUIState> const &state);
 
+    virtual std::pair<pugi::xml_document, bool>
+        createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical) = 0;
+
 private:
-    static char const *toColorString(button_state::PhoneButton::Color const color);
-    static char const *toButtonStateString(button_state::PhoneButton const &button);
-
-    static pugi::xml_document
-        createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool &critical);
-
     std::shared_ptr<PhoneUIState> cached_button_state_;
     std::shared_mutex cached_button_state_mut_;
 };
