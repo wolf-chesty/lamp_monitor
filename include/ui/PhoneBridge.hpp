@@ -32,17 +32,22 @@ public:
     void dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify action);
 
 private:
+    /// @brief Starts the PJSIP notification dispatch thread.
     void startWorkThread();
+
+    /// @brief Stops the PJSIP notification dispatch thread.
     void stopWorkThread();
+
+    /// @brief Thread that dispatches PJSIP notifications in the background.
     void workThread();
 
-    std::shared_ptr<cpp_ami::Connection> io_conn_;
-    std::shared_ptr<DeskphoneCache> deskphone_cache_;
-    std::vector<std::pair<std::string, cpp_ami::action::PJSIPNotify>> messages_;
-    std::mutex messages_mut_;
-    std::condition_variable messages_cv_;
-    std::thread work_thread_;
-    std::atomic<bool> work_thread_run_;
+    std::shared_ptr<cpp_ami::Connection> io_conn_;                               ///< Connection to Asterisk AMI server.
+    std::shared_ptr<DeskphoneCache> deskphone_cache_;                            ///< Cache of deskphones.
+    std::vector<std::pair<std::string, cpp_ami::action::PJSIPNotify>> messages_; ///< PJSIP notifications to dispatch.
+    std::mutex messages_mut_;                                                    ///< Mutex on message collection.
+    std::condition_variable messages_cv_;                                        ///< Condition variable to wake thread.
+    std::thread work_thread_;                                                    ///< Handle to work thread.
+    std::atomic<bool> work_thread_run_;                                          ///< Flag to start/stop work thread.
 };
 
 } // namespace ui
