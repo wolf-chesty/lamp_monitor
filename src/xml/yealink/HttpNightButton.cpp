@@ -26,18 +26,15 @@ std::string HTTPNightButton::pushButton()
     assert(button_);
     auto const button_on = !button_->isOn();
 
-    cpp_ami::util::ScopeGuard const send_message(
-        [io_conn = io_conn_, device = device_, button_on]() -> void {
-            // Update device state on Asterisk server
-           assert(io_conn);
-           cpp_ami::action::Setvar action;
-           action["Variable"] = fmt::format("DEVICE_STATE({})", device);
-           action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
-           io_conn->asyncInvoke(action);
-        });
+    // Update device state on Asterisk server
+    assert(io_conn_);
+    cpp_ami::action::Setvar action;
+    action["Variable"] = fmt::format("DEVICE_STATE({})", device_);
+    action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
+    io_conn_->asyncInvoke(action);
 
     // Return XML for new button state
-    auto const inverted_button = std::make_shared<button_state::PhoneButton>(button_->buttonID(), button_->color(),
-                                                                             button_->flash(), button_on, button_on);
+    auto const inverted_button = std::make_shared<button_state::PhoneButton>(
+        button_->buttonID(), button_->color(), button_->flash(), button_->isCritical(), button_on);
     return PhoneUI::createYealinkXMLString({inverted_button});
 }
