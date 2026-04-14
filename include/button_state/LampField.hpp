@@ -55,6 +55,11 @@ public:
     /// @return Collection of button objects monitored by this object.
     std::vector<std::shared_ptr<PhoneButton>> getButtons();
 
+    /// @brief Returns button for \c button_id.
+    ///
+    /// @param button_id Button ID of button to get from collection of monitored buttons.
+    std::shared_ptr<PhoneButton> getButton(uint16_t const button_id);
+
     /// @brief Add phone UI to this lamp field.
     ///
     /// @param ui_name Phone name.

@@ -24,12 +24,28 @@ public:
 
     /// @brief Creates an XML browser text body compatible with Yealink deskphones.
     ///
+    /// @param button Button to generate XML text for.
+    ///
+    /// @return String containing XML browser code compatible with Yealink deskphones.
+    static std::string createYealinkXMLString(std::shared_ptr<button_state::PhoneButton> const button);
+
+    /// @brief Creates an XML browser text body compatible with Yealink deskphones.
+    ///
     /// @param buttons Buttons to generate XML text for.
     ///
-    /// @return String containing XML browser code compatible with Yealink diskphones.
+    /// @return String containing XML browser code compatible with Yealink deskphones.
     static std::string createYealinkXMLString(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons);
 
 protected:
+    /// @brief Generates XML code for the phone UI's current state.
+    ///
+    /// @param button Button to generate state XML for.
+    /// @param critical Set to \c true if you wish to force the phone state to be critical.
+    ///
+    /// @return XML representing the phones current state and bool flag indicating if state is critical.
+    std::pair<pugi::xml_document, bool> createPhoneStateXML(std::shared_ptr<button_state::PhoneButton> const &button,
+                                                            bool critical) override;
+
     /// @brief Generates XML code for the phone UI's current state.
     ///
     /// @param buttons Buttons to generate state XML for.
@@ -54,6 +70,15 @@ private:
     ///
     /// @eturn String representation of \c button.
     static char const *toButtonStateString(button_state::PhoneButton const &button);
+
+    /// @brief Creates Yealink XML browser code.
+    ///
+    /// @param button Button to create XML browser code from.
+    /// @param critical Set to \c true to force the XML browser to wake the phone screen.
+    ///
+    /// @return Phone XML browser code and critical state of state.
+    static std::pair<pugi::xml_document, bool>
+        createYealinkXML(std::shared_ptr<button_state::PhoneButton> const &button, bool critical);
 
     /// @brief Creates Yealink XML browser code.
     ///

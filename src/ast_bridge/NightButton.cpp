@@ -60,18 +60,3 @@ void NightButton::amiEventHandler(cpp_ami::util::KeyValDict const &event)
         phone_button_->setOn(true);
     }
 }
-
-std::shared_ptr<cpp_ami::Connection> NightButton::getAMIConnection()
-{
-    return io_conn_;
-}
-
-std::string const &NightButton::getDevice()
-{
-    return device_;
-}
-
-std::shared_ptr<button_state::PhoneButton> NightButton::getPhoneButton()
-{
-    return phone_button_;
-}

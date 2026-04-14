@@ -52,15 +52,48 @@ char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button
 }
 
 std::pair<pugi::xml_document, bool>
+    PhoneUI::createPhoneStateXML(std::shared_ptr<button_state::PhoneButton> const &button, bool critical)
+{
+    return PhoneUI::createYealinkXML(button, critical);
+}
+
+std::pair<pugi::xml_document, bool>
     PhoneUI::createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical)
 {
     return PhoneUI::createYealinkXML(buttons, critical);
+}
+
+std::string PhoneUI::createYealinkXMLString(std::shared_ptr<button_state::PhoneButton> const button)
+{
+    auto const [xml, _] = createYealinkXML(button, false);
+    return ui::PhoneUIState::toString(xml);
 }
 
 std::string PhoneUI::createYealinkXMLString(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
 {
     auto const [xml, _] = createYealinkXML(buttons, false);
     return ui::PhoneUIState::toString(xml);
+}
+
+std::pair<pugi::xml_document, bool> PhoneUI::createYealinkXML(std::shared_ptr<button_state::PhoneButton> const &button,
+                                                              bool critical)
+{
+    pugi::xml_document xml_doc;
+    auto decl = xml_doc.append_child(pugi::node_declaration);
+    decl.append_attribute("version") = "1.0";
+    decl.append_attribute("encoding") = "ISO-8859-1";
+
+    auto execute_xml = xml_doc.append_child("YealinkIPPhoneExecute");
+    execute_xml.append_attribute("refresh") = "1";
+
+    assert(button);
+    auto button_xml = execute_xml.append_child("ExecuteItem");
+    button_xml.append_attribute("URI") = fmt::format("Led:LINE{}_{}={}", button->buttonID(),
+                                                     toColorString(button->color()), toButtonStateString(*button));
+    critical |= button->isCritical();
+    execute_xml.append_attribute("Beep") = critical ? "yes" : "no";
+
+    return std::make_pair(std::move(xml_doc), critical);
 }
 
 std::pair<pugi::xml_document, bool>
@@ -76,11 +109,10 @@ std::pair<pugi::xml_document, bool>
 
     assert(!buttons.empty());
     for (auto const &button : buttons) {
-        critical |= button->isCritical();
-
         auto button_xml = execute_xml.append_child("ExecuteItem");
         button_xml.append_attribute("URI") = fmt::format("Led:LINE{}_{}={}", button->buttonID(),
                                                          toColorString(button->color()), toButtonStateString(*button));
+        critical |= button->isCritical();
     }
     execute_xml.append_attribute("Beep") = critical ? "yes" : "no";
 

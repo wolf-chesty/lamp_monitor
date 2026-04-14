@@ -58,6 +58,15 @@ protected:
 
     /// @brief Creates the new phone UI state from the buttons states and initial critical state.
     ///
+    /// @param button Button to create the new phone state XML from.
+    /// @param critical Overrides the initial critical state of the UI state.
+    ///
+    /// @return XML state and critical flag.
+    virtual std::pair<pugi::xml_document, bool>
+        createPhoneStateXML(std::shared_ptr<button_state::PhoneButton> const &button, bool critical) = 0;
+
+    /// @brief Creates the new phone UI state from the buttons states and initial critical state.
+    ///
     /// @param buttons Buttons to create the new phone state XML from.
     /// @param critical Overrides the initial critical state of the UI state.
     ///

@@ -45,7 +45,14 @@ std::vector<std::shared_ptr<PhoneButton>> LampField::getButtons()
     return buttons;
 }
 
-void LampField::invalidate(uint16_t const button_id)
+std::shared_ptr<PhoneButton> LampField::getButton(uint16_t const button_id)
+{
+    std::shared_lock const lock(buttons_mut_);
+    auto const itr = buttons_.find(button_id);
+    return itr != buttons_.end() ? itr->second : nullptr;
+}
+
+void LampField::invalidate([[maybe_unused]] uint16_t const button_id)
 {
     std::shared_lock const lock(phone_uis_mut_);
     std::for_each(std::execution::par, phone_uis_.begin(), phone_uis_.end(),

@@ -63,12 +63,12 @@ void Deskphone::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     }
 }
 
-void Deskphone::publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_adapter)
+void Deskphone::publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_ui)
 {
     cpp_ami::action::PJSIPNotify action;
     action["Endpoint"] = aor;
-    assert(phone_adapter);
-    phone_adapter->initialize(action);
+    assert(phone_ui);
+    phone_ui->initialize(action);
 
     assert(io_conn_);
     io_conn_->asyncInvoke(action);

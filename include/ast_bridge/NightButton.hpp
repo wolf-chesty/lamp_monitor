@@ -27,22 +27,6 @@ public:
                          std::string device);
     virtual ~NightButton();
 
-protected:
-    /// @brief Returns a pointer to the Asterisk AMI connection object.
-    ///
-    /// @return Pointer to the objects Asterisk AMI connection object.
-    std::shared_ptr<cpp_ami::Connection> getAMIConnection();
-
-    /// @brief Returns the device that holds the Asterisk night button state.
-    ///
-    /// @return Name of the Asterisk device holding the night button state.
-    std::string const &getDevice();
-
-    /// @brief Returns pointer to the phone button state object.
-    ///
-    /// @return Pointer to the phone button state.
-    std::shared_ptr<button_state::PhoneButton> getPhoneButton();
-
 private:
     /// @brief Function that processes Asterisk AMI events.
     ///

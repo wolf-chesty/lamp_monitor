@@ -34,7 +34,11 @@ private:
     /// @param event Event sent by the Asterisk AMI server.
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
-    void publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_adapter);
+    /// @brief Publish phone state to \c aor.
+    ///
+    /// @param aor AOR to send state to.
+    /// @param phone_ui Phone UI renderer.
+    void publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_ui);
 
     std::shared_ptr<DeskphoneCache> deskphone_cache_;           ///< Deskphone cache.
     std::shared_ptr<button_state::LampField> lamp_field_;       ///< Lamp field state.

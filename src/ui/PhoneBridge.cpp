@@ -14,6 +14,8 @@ PhoneBridge::PhoneBridge(std::shared_ptr<cpp_ami::Connection> io_conn, std::shar
     assert(io_conn_);
     assert(deskphone_cache_);
 
+    messages_.reserve(128);
+
     startWorkThread();
 }
 
@@ -49,11 +51,12 @@ void PhoneBridge::stopWorkThread()
 void PhoneBridge::workThread()
 {
     decltype(messages_) messages;
+    messages.reserve(messages_.capacity());
 
     while (work_thread_run_) {
         std::unique_lock lock(messages_mut_);
         messages_cv_.wait(lock, [this]() -> bool { return !work_thread_run_ || !messages_.empty(); });
-        messages = std::move(messages_);
+        std::swap(messages, messages_);
         lock.unlock();
 
         if (!work_thread_run_) {
@@ -66,5 +69,6 @@ void PhoneBridge::workThread()
                 io_conn_->asyncInvoke(action);
             });
         }
+        messages.clear();
     }
 }

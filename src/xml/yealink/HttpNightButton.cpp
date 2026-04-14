@@ -36,5 +36,5 @@ std::string HTTPNightButton::pushButton()
     // Return XML for new button state
     auto const inverted_button = std::make_shared<button_state::PhoneButton>(
         button_->buttonID(), button_->color(), button_->flash(), button_->isCritical(), button_on);
-    return PhoneUI::createYealinkXMLString({inverted_button});
+    return PhoneUI::createYealinkXMLString(inverted_button);
 }
