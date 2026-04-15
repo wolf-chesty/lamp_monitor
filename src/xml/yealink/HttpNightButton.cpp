@@ -8,6 +8,7 @@
 #include <c++ami/util/ScopeGuard.hpp>
 #include <cassert>
 #include <fmt/core.h>
+#include <syslog.h>
 
 using namespace xml::yealink;
 
@@ -27,13 +28,17 @@ std::string HTTPNightButton::pushButton()
     auto const button_on = !button_->isOn();
 
     // Update device state on Asterisk server
-    assert(io_conn_);
-    cpp_ami::action::Setvar action;
-    action["Variable"] = fmt::format("DEVICE_STATE({})", device_);
-    action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
-    io_conn_->asyncInvoke(action);
+    cpp_ami::util::ScopeGuard const post_action([io_conn = io_conn_, device = device_, button_on]() -> void {
+        assert(io_conn);
+        cpp_ami::action::Setvar action;
+        action["Variable"] = fmt::format("DEVICE_STATE({})", device);
+        action["Value"] = button_on ? "INUSE" : "NOT_INUSE";
+        syslog(LOG_DEBUG, "HTTPNightButton::pushButton() : Posting AMI action \"%s\"", action.toString().c_str());
+        io_conn->asyncInvoke(action);
+    });
 
     // Return XML for new button state
+    syslog(LOG_DEBUG, "HTTPNightButton::pushButton() : Setting night button to \"%s\"", button_on ? "on" : "off");
     auto const inverted_button = std::make_shared<button_state::PhoneButton>(
         button_->buttonID(), button_->color(), button_->flash(), button_->isCritical(), button_on);
     return PhoneUI::createYealinkXMLString(inverted_button);
