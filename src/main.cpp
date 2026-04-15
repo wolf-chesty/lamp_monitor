@@ -18,11 +18,13 @@
 #include <c++ami/action/Logoff.hpp>
 #include <c++ami/action/Ping.hpp>
 #include <c++ami/Connection.hpp>
+#include <c++ami/util/ScopeGuard.hpp>
 #include <filesystem>
 #include <httplib.h>
 #include <inicpp.h>
 #include <memory>
 #include <string_view>
+#include <syslog.h>
 #include <unistd.h>
 
 // Function declarations ===============================================================================================
@@ -51,6 +53,15 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
+
+    int const options = args.is_daemon ? LOG_NDELAY : (LOG_CONS | LOG_NDELAY);
+    openlog("lamp_monitor", options, LOG_USER);
+    syslog(LOG_DEBUG, "Starting lamp_monitor");
+
+    cpp_ami::util::ScopeGuard log_guard([]() -> void {
+        syslog(LOG_DEBUG, "Stopping lamp_monitor");
+        closelog();
+    });
 
     // Create AMI connection
     auto const ami_hostname = ami_ini["ami"]["host"].as<std::string>();
@@ -121,9 +132,7 @@ void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_i
     auto const reaction = conn->invoke(login);
     // Confirm login
     if (!reaction->isSuccess()) {
-        if (!is_daemon) {
-            std::cerr << "Unable to login to AMI";
-        }
+        syslog(LOG_ERR, "Unable to login to AMI.");
         exit(EXIT_FAILURE);
     }
 }
@@ -144,6 +153,7 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
                                 std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period)
 {
     std::thread work_thread([&cv, &run_thread_flag, ami_conn, period, ping = cpp_ami::action::Ping()]() -> void {
+        syslog(LOG_DEBUG, "Starting ping thread");
         do {
             // Send ping to the AMI server, waiting for the result
             auto const r = ami_conn->invoke(ping);
@@ -169,7 +179,7 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(ini::IniFile &cfg_ini)
 {
     auto const db_filename = cfg_ini["handset_cache"]["filename"].as<std::string>();
     auto const db_expiry = cfg_ini["handset_cache"]["expiry"].as<uint32_t>();
-    return std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
+    return std::make_shared<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
 }
 
 /// @brief Creates a phone UI and attaches it to the deskphone.
@@ -203,9 +213,9 @@ std::shared_ptr<ui::PhoneUI> createPhoneUI(std::unique_ptr<httplib::Server> cons
 /// @param http_server Pointer to HTTP server to bind URI's to.
 /// @param cfg_ini INI configuration object.
 std::unique_ptr<ast_bridge::NightButton> createNightButton(std::shared_ptr<button_state::LampField> const &lamp_field,
-                                                        std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                        std::unique_ptr<httplib::Server> const &http_server,
-                                                        ini::IniFile &cfg_ini)
+                                                           std::shared_ptr<cpp_ami::Connection> const &io_conn,
+                                                           std::unique_ptr<httplib::Server> const &http_server,
+                                                           ini::IniFile &cfg_ini)
 {
     // Setup XML browser
     auto const button_id = cfg_ini["night_button"]["button_id"].as<unsigned int>();
@@ -232,9 +242,9 @@ std::unique_ptr<ast_bridge::NightButton> createNightButton(std::shared_ptr<butto
 /// @param http_server Pointer to HTTP server to bind URI's to.
 /// @param cfg_ini INI configuration object.
 std::unique_ptr<ast_bridge::ParkButton> createParkButton(std::shared_ptr<button_state::LampField> const &lamp_field,
-                                                      std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                      std::unique_ptr<httplib::Server> const &http_server,
-                                                      ini::IniFile &cfg_ini)
+                                                         std::shared_ptr<cpp_ami::Connection> const &io_conn,
+                                                         std::unique_ptr<httplib::Server> const &http_server,
+                                                         ini::IniFile &cfg_ini)
 {
     // Setup XML browser interface
     auto const http_url = cfg_ini["http_server"]["url"].as<std::string>();
@@ -279,7 +289,8 @@ void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_serv
     auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
     auto const phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_adapter, std::chrono::minutes(60));
     http_server->Get(phonebook_uri,
-                     [phonebook]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                     [phonebook, phonebook_uri]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                         syslog(LOG_DEBUG, "Retrieving phonebook at %s", phonebook_uri.c_str());
                          res.set_content(phonebook->getPhonebookString(), "text/xml");
                      });
 }

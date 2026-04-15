@@ -44,12 +44,12 @@ public:
     static std::string toString(pugi::xml_document const &xml);
 
 private:
-    pugi::xml_document xml_;  ///< XML containing lamp field state.
-    bool is_critical_{false}; ///< Flag indicating XML should be pushed to deskphones.
-    std::string xml_str_;     ///< Mutex controlling access to cached XML string.
-    std::mutex xml_str_mut_;  ///< Cached XML string representation of lamp field state XML.
+    pugi::xml_document xml_; ///< XML containing lamp field state.
+    bool is_critical_{};     ///< Flag indicating XML should be pushed to deskphones.
+    std::string xml_str_;    ///< Mutex controlling access to cached XML string.
+    std::mutex xml_str_mut_; ///< Cached XML string representation of lamp field state XML.
 };
 
-} // namespace monitor
+} // namespace ui
 
 #endif

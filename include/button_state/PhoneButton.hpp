@@ -79,8 +79,8 @@ protected:
 
 private:
     std::shared_ptr<LampField> lamp_field_; ///< Pointer to lamp field that monitors this button.
-    uint16_t button_id_;                    ///< Button ID in lamp field.
-    Color color_;                           ///< Button color for deskphones that support color displays.
+    uint16_t button_id_{};                  ///< Button ID in lamp field.
+    Color color_{Color::Red};               ///< Button color for deskphones that support color displays.
     bool flash_{false};                     ///< Button should flash.
     std::atomic<bool> is_critical_{false};  ///< Flag indicating phone screen should be updated.
     std::atomic<bool> button_on_{false};    ///< Current button state.

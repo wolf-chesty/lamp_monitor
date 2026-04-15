@@ -5,6 +5,7 @@
 
 #include <c++ami/action/ParkedCalls.hpp>
 #include <cassert>
+#include <syslog.h>
 
 using namespace ast_bridge;
 
@@ -53,5 +54,6 @@ void ParkButton::amiEventHandler(cpp_ami::util::KeyValDict const &event)
 
 void ParkButton::updateButtonState(bool const parked_calls_present)
 {
+    syslog(LOG_DEBUG, "ParkButton::updateButtonState : Setting park button '%s'", parked_calls_present ? "on" : "off");
     phone_button_->setState(parked_calls_present, parked_calls_present);
 }

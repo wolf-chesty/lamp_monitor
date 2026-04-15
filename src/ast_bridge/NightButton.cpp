@@ -5,6 +5,7 @@
 
 #include <c++ami/action/ExtensionStateList.hpp>
 #include <cassert>
+#include <syslog.h>
 
 using namespace ast_bridge;
 
@@ -53,10 +54,18 @@ void NightButton::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     auto const &device_state = event["Status"];
     if (device_state == "0") {
         assert(phone_button_);
+        syslog(
+            LOG_DEBUG,
+            "NightButton::amiEventHandler() : Setting night button 'off'; exten=\"%s\", context=\"%s\", device=\"%s\"",
+            night_exten_.c_str(), context_.c_str(), device_.c_str());
         phone_button_->setOn(false);
     }
     else if (device_state == "1") {
         assert(phone_button_);
+        syslog(
+            LOG_DEBUG,
+            "NightButton::amiEventHandler() : Setting night button 'on'; exten=\"%s\", context=\"%s\", device=\"%s\"",
+            night_exten_.c_str(), context_.c_str(), device_.c_str());
         phone_button_->setOn(true);
     }
 }

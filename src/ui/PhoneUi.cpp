@@ -5,16 +5,28 @@
 
 #include <fmt/core.h>
 #include <shared_mutex>
+#include <syslog.h>
 
 using namespace ui;
 
+PhoneUI::PhoneUI()
+{
+    syslog(LOG_DEBUG, "PhoneUI::PhoneUI()");
+}
+
+PhoneUI::~PhoneUI()
+{
+    syslog(LOG_DEBUG, "PhoneUI::~PhoneUI()");
+}
+
 void PhoneUI::update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
 {
+    syslog(LOG_DEBUG, "PhoneUI::update() : Caching phone screen state");
+
     // Create phone state XML from buttons
     auto [xml_doc, critical] = createPhoneStateXML(buttons, false);
     // Create new phone state object for caching
-    auto const state = std::make_shared<PhoneUIState>(std::move(xml_doc), critical);
-    setPhoneState(state);
+    setPhoneState(std::make_shared<PhoneUIState>(std::move(xml_doc), critical));
 }
 
 std::shared_ptr<PhoneUIState> PhoneUI::getPhoneState()

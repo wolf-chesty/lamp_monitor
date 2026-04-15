@@ -21,8 +21,8 @@ namespace ui {
 /// @brief Provides an interface for objects that can generate XML data specific to hardware deskphones.
 class PhoneUI {
 public:
-    PhoneUI() = default;
-    virtual ~PhoneUI() = default;
+    PhoneUI();
+    virtual ~PhoneUI();
 
     /// @brief Invoked whenever the button state for a lamp field is updated.
     ///

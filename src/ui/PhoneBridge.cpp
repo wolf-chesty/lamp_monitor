@@ -4,6 +4,7 @@
 #include "ui/PhoneBridge.hpp"
 
 #include <cassert>
+#include <syslog.h>
 
 using namespace ui;
 
@@ -14,6 +15,8 @@ PhoneBridge::PhoneBridge(std::shared_ptr<cpp_ami::Connection> io_conn, std::shar
     assert(io_conn_);
     assert(deskphone_cache_);
 
+    syslog(LOG_DEBUG, "PhoneBridge::PhoneBridge()");
+
     messages_.reserve(128);
 
     startWorkThread();
@@ -21,11 +24,15 @@ PhoneBridge::PhoneBridge(std::shared_ptr<cpp_ami::Connection> io_conn, std::shar
 
 PhoneBridge::~PhoneBridge()
 {
+    syslog(LOG_DEBUG, "PhoneBridge::~PhoneBridge()");
+
     stopWorkThread();
 }
 
 void PhoneBridge::dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify action)
 {
+    syslog(LOG_DEBUG, "PhoneBridge::dispatch(\"%s\", \"%s\")",phone_id.c_str(), action.toString().c_str());
+
     std::lock_guard const lock(messages_mut_);
     messages_.emplace_back(phone_id, std::move(action));
     messages_cv_.notify_one();
@@ -50,6 +57,8 @@ void PhoneBridge::stopWorkThread()
 
 void PhoneBridge::workThread()
 {
+    syslog(LOG_DEBUG, "PhoneBridge::workThread() : Start thread");
+
     decltype(messages_) messages;
     messages.reserve(messages_.capacity());
 
@@ -71,4 +80,6 @@ void PhoneBridge::workThread()
         }
         messages.clear();
     }
+
+    syslog(LOG_DEBUG, "PhoneBridge::workThread() : Stop thread");
 }

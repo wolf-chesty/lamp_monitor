@@ -5,17 +5,22 @@
 
 #include <charconv>
 #include <ranges>
+#include <syslog.h>
 
 DeskphoneCache::DeskphoneCache(std::string_view filename, std::chrono::milliseconds expiry)
     : connection_pool_(filename)
     , expiry_(expiry)
 {
+    syslog(LOG_DEBUG, "DeskphoneCache::DeskphoneCache(%s, %ld)", filename.data(), expiry_.count());
+
     initializeDatabase();
     startWorkThread();
 }
 
 DeskphoneCache::~DeskphoneCache()
 {
+    syslog(LOG_DEBUG, "DeskphoneCache::~DeskphoneCache()");
+
     stopWorkThread();
 
     auto connection = connection_pool_.getConnection();
@@ -37,6 +42,8 @@ DeskphoneCache::~DeskphoneCache()
 /// can immediately occur.
 void DeskphoneCache::initializeDatabase()
 {
+    syslog(LOG_DEBUG, "Initializing database cache");
+
     connection_pool_.setPrepSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
 
     auto connection = connection_pool_.getConnection();
@@ -64,6 +71,8 @@ void DeskphoneCache::initializeDatabase()
 /// function will return \c false indicating that the deskphone already existed in the table.
 bool DeskphoneCache::addEndpoint(std::string aor, std::string endpoint)
 {
+    syslog(LOG_DEBUG, "DeskphoneCache::addEndpoint(\"%s\", \"%s\")", aor.c_str(), endpoint.c_str());
+
     // Query table for unexpired handset
     auto connection = connection_pool_.getConnection();
     auto check =
@@ -88,6 +97,8 @@ bool DeskphoneCache::addEndpoint(std::string aor, std::string endpoint)
 /// This function removes the deskphone identified by \c aor and \c ip from the table of active deskphones.
 void DeskphoneCache::deleteEndpoint(std::string aor, std::string ip)
 {
+    syslog(LOG_DEBUG, "DeskphoneCache::deleteEndpoint(\"%s\", \"%s\")", aor.c_str(), ip.c_str());
+
     // Enqueue expiring endpoint from the deskphone cache
     std::lock_guard const lock(batch_mut_);
     batch_.emplace_back(SQLAction::remove, std::move(aor), std::move(ip), 0);
@@ -129,6 +140,8 @@ void DeskphoneCache::stopWorkThread()
 /// enqueueing of a write may be out of date.
 void DeskphoneCache::workThread()
 {
+    syslog(LOG_DEBUG, "DeskphoneCache::workThread() : Start thread");
+
     // Rather than recompiling prepared statements for every iteration of this service thread this function will compile
     // the statements a single time for the duration of this thread.
     auto connection = connection_pool_.getConnection();
@@ -216,4 +229,6 @@ void DeskphoneCache::workThread()
 
         batch.clear();
     }
+
+    syslog(LOG_DEBUG, "DeskphoneCache::workThread() : Stop thread");
 }
