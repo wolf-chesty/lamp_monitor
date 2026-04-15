@@ -5,6 +5,7 @@
 
 #include <pugixml.hpp>
 #include <sstream>
+#include <syslog.h>
 
 using namespace xml::yealink;
 
@@ -16,6 +17,8 @@ XMLPhonebook::XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter
 
 std::string XMLPhonebook::getPhonebookString()
 {
+    syslog(LOG_DEBUG, "XMLPhonebook::getPhonebookString() : Creating phonebook screen");
+
     std::lock_guard const lock(phonebook_xml_mut_);
 
     // Phonebook XML is still valid

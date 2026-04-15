@@ -9,11 +9,11 @@
 #include <fmt/core.h>
 #include <pugixml.hpp>
 #include <sstream>
+#include <syslog.h>
 
 using namespace xml::yealink;
 
-CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn,
-                                     std::string parked_call_info_uri)
+CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parked_call_info_uri)
     : io_conn_(std::move(io_conn))
     , parked_call_info_uri_(std::move(parked_call_info_uri))
 {
@@ -77,6 +77,8 @@ void createParkedCallNode(pugi::xml_node parked_call, std::string_view parked_ca
 
 std::string CallParkMenu::createParkedCallMenu(cpp_ami::reaction::EventList const &parked_call_list) const
 {
+    syslog(LOG_DEBUG, "CallParkMenu::createParkedCallMenu() : Creating parked call menu");
+
     pugi::xml_document doc;
     auto decl = doc.append_child(pugi::node_declaration);
     decl.append_attribute("version") = "1.0";
@@ -107,13 +109,16 @@ std::string CallParkMenu::createParkedCallMenu(cpp_ami::reaction::EventList cons
 
 std::string CallParkMenu::createNoParkedCallMessage()
 {
+    syslog(LOG_DEBUG, "CallParkMenu::createNoParkedCallMessages() : Creating phone screen");
+
     return createMessageXML(false, 5, "Parked Calls: 0", "No parked calls.");
 }
 
 std::string CallParkMenu::getParkedCallDetails(std::string const &park_exten) const
 {
-    assert(io_conn_);
+    syslog(LOG_DEBUG, "CallParkMenu::getParkedCallDetails(\"%s\")", park_exten.c_str());
 
+    assert(io_conn_);
     cpp_ami::action::ParkedCalls parked_calls;
     auto const ami_response = io_conn_->invoke(parked_calls);
     auto const ami_response_list = dynamic_cast<cpp_ami::reaction::EventList const *>(ami_response.get());
