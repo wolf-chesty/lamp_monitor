@@ -27,19 +27,31 @@
 #include <syslog.h>
 #include <unistd.h>
 
-// Function declarations ===============================================================================================
+// Globals =============================================================================================================
 
-void signalHandler(int signum);
+std::unique_ptr<httplib::Server> g_server;
+
+/// @brief Handles termination events sent to the application.
+///
+/// @param signum Signal sent to the application.
+///
+/// The application is waiting for the HTTP server to spin down before continuing on. When the application encounters a
+/// termination signal it will tell the HTTP server to stop, allowing the application to continue on and stop.
+void signalHandler(int signum, siginfo_t *info, void *ptr)
+{
+    syslog(LOG_DEBUG, "Caught termination");
+    if (g_server && signum == SIGTERM) {
+        g_server->stop();
+    }
+}
+
+// Function declarations ===============================================================================================
 
 ApplicationParameters getApplicationParameters(int argc, char *argv[]);
 
 void login(std::shared_ptr<cpp_ami::Connection> const &ami_conn, ini::IniFile &cfg_ini, bool is_daemon);
 
 void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn);
-
-// Globals =============================================================================================================
-
-std::unique_ptr<httplib::Server> g_server;
 
 int main(int argc, char *argv[])
 {
@@ -75,15 +87,15 @@ int main(int argc, char *argv[])
     login(io_conn, ami_ini, args.is_daemon);
 
     // Register SIGTERM handler
-    struct sigaction action{};
-    memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = signalHandler;
-    if (sigaction(SIGTERM, &action, nullptr) < 0) {
+    struct sigaction sa{};
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_sigaction = signalHandler;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGTERM, &sa, nullptr) < 0) {
         syslog(LOG_ERR, "Unable to registery SIGTERM handler");
         exit(EXIT_FAILURE);
     }
-    // Ignore SIGPIP so we don't crash libhttp
-    signal(SIGPIPE, SIG_IGN);
 
     serviceThread(ami_ini, io_conn);
 
@@ -92,19 +104,6 @@ int main(int argc, char *argv[])
     auto const reaction = io_conn->invoke(logoff);
 
     return EXIT_SUCCESS;
-}
-
-/// @brief Handles termination events sent to the application.
-///
-/// @param signum Signal sent to the application.
-///
-/// The application is waiting for the HTTP server to spin down before continuing on. When the application encounters a
-/// termination signal it will tell the HTTP server to stop, allowing the application to continue on and stop.
-void signalHandler(int signum)
-{
-    if (g_server && signum == SIGTERM) {
-        g_server->stop();
-    }
 }
 
 /// @brief Gets application parameters.
