@@ -69,7 +69,7 @@ void DeskphoneCache::initializeDatabase()
 ///
 /// This function will return \c true if the deskphone didn't exist in the table of active deskphones. Otherwise, this
 /// function will return \c false indicating that the deskphone already existed in the table.
-bool DeskphoneCache::addEndpoint(std::string aor, std::string endpoint)
+bool DeskphoneCache::addEndpoint(std::string const &aor, std::string const &endpoint)
 {
     syslog(LOG_DEBUG, "DeskphoneCache::addEndpoint(\"%s\", \"%s\")", aor.c_str(), endpoint.c_str());
 
@@ -87,25 +87,24 @@ bool DeskphoneCache::addEndpoint(std::string aor, std::string endpoint)
 
     // Enqueue adding endpoint to the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::insert, std::move(aor), std::move(endpoint),
-                        (now + expiry_).time_since_epoch().count());
+    batch_.emplace_back(SQLAction::insert, aor, endpoint, (now + expiry_).time_since_epoch().count());
     batch_write_cv_.notify_one();
 
     return !found_rec;
 }
 
 /// This function removes the deskphone identified by \c aor and \c ip from the table of active deskphones.
-void DeskphoneCache::deleteEndpoint(std::string aor, std::string ip)
+void DeskphoneCache::deleteEndpoint(std::string const &aor, std::string const &ip)
 {
     syslog(LOG_DEBUG, "DeskphoneCache::deleteEndpoint(\"%s\", \"%s\")", aor.c_str(), ip.c_str());
 
     // Enqueue expiring endpoint from the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::remove, std::move(aor), std::move(ip), 0);
+    batch_.emplace_back(SQLAction::remove, aor, ip, 0);
     batch_write_cv_.notify_one();
 }
 
-void DeskphoneCache::forEachAOR(std::function<void(std::string_view)> const &lambda)
+void DeskphoneCache::forEachAOR(std::function<void(std::string const &)> const &lambda)
 {
     auto connection = connection_pool_.getConnection();
     auto select_stmt = connection.getStmt("SELECT DISTINCT aor FROM endpoints WHERE expiry > ?;");

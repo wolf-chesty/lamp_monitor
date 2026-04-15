@@ -29,7 +29,7 @@ public:
     ///
     /// @param phone_id Phone ID to send the notification action to.
     /// @param action PJSIP notification action to send.
-    void dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify action);
+    void dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify const &action);
 
 private:
     /// @brief Starts the PJSIP notification dispatch thread.

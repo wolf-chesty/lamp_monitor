@@ -42,18 +42,18 @@ public:
     /// @param endpoint Endpoint details of the deskphone.
     ///
     /// @return \c true if the deskphone was added to the cache.
-    bool addEndpoint(std::string aor, std::string endpoint);
+    bool addEndpoint(std::string const &aor, std::string const &endpoint);
 
     /// @brief Removes the deskphone from the cache.
     ///
     /// @param aor ID of the deskphone on the asterisk server.
     /// @param ip IP address of the deskphone.
-    void deleteEndpoint(std::string aor, std::string ip);
+    void deleteEndpoint(std::string const &aor, std::string const &ip);
 
     /// @brief Invokes \c lambda on each deskphone AOR in the cache.
     ///
     /// @param lambda Lambda to invoke on each deskphone AOR.
-    void forEachAOR(std::function<void(std::string_view)> const &lambda);
+    void forEachAOR(std::function<void(std::string const &)> const &lambda);
 
 private:
     /// @brief Initializes the database used to contain deskphone details.

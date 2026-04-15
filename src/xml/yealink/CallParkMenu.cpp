@@ -20,7 +20,7 @@ CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::st
     assert(io_conn_);
 }
 
-std::string CallParkMenu::createMessageXML(bool beep, uint8_t timeout, std::string const &title,
+std::string CallParkMenu::createMessageXML(bool const beep, uint8_t const timeout, std::string const &title,
                                            std::string const &text)
 {
     pugi::xml_document doc;

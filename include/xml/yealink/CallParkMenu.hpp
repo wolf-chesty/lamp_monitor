@@ -31,7 +31,8 @@ public:
     /// @param text Text to display in the text screen window.
     ///
     /// @return XML browser string to be displayed by a Yealink IP deskphone.
-    static std::string createMessageXML(bool beep, uint8_t timeout, std::string const &title, std::string const &text);
+    static std::string createMessageXML(bool const beep, uint8_t const timeout, std::string const &title,
+                                        std::string const &text);
 
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
     ///

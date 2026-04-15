@@ -29,12 +29,12 @@ PhoneBridge::~PhoneBridge()
     stopWorkThread();
 }
 
-void PhoneBridge::dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify action)
+void PhoneBridge::dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify const &action)
 {
     syslog(LOG_DEBUG, "PhoneBridge::dispatch(\"%s\", \"%s\")",phone_id.c_str(), action.toString().c_str());
 
     std::lock_guard const lock(messages_mut_);
-    messages_.emplace_back(phone_id, std::move(action));
+    messages_.emplace_back(phone_id, action);
     messages_cv_.notify_one();
 }
 

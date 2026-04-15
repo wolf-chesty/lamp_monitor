@@ -63,7 +63,7 @@ void LampField::invalidate([[maybe_unused]] uint16_t const button_id)
                       // Publish the UI state to the physical deskphones
                       cpp_ami::action::PJSIPNotify action;
                       ui->initialize(action);
-                      phone_bridge_->dispatch(itr.first, std::move(action));
+                      phone_bridge_->dispatch(itr.first, action);
                   });
 }
 
