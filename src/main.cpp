@@ -50,17 +50,18 @@ int main(int argc, char *argv[])
 
     if (args.is_daemon) {
         if (daemon(0, 0) == -1) {
+            syslog(LOG_CRIT, "Unable to daemonize");
             exit(EXIT_FAILURE);
         }
     }
 
+    // Configure syslog
     int const options = args.is_daemon ? LOG_NDELAY : (LOG_CONS | LOG_NDELAY);
     openlog("lamp_monitor", options, LOG_USER);
     syslog(LOG_DEBUG, "Starting lamp_monitor");
-
+    // Set log level
     auto const log_level = ami_ini["settings"]["log_level"].as<int>();
     setlogmask(LOG_UPTO(log_level));
-
     cpp_ami::util::ScopeGuard log_guard([]() -> void {
         syslog(LOG_DEBUG, "Stopping lamp_monitor");
         closelog();
@@ -72,6 +73,17 @@ int main(int argc, char *argv[])
     auto io_conn = std::make_shared<cpp_ami::Connection>(ami_hostname, ami_port);
 
     login(io_conn, ami_ini, args.is_daemon);
+
+    // Register SIGTERM handler
+    struct sigaction action{};
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = signalHandler;
+    if (sigaction(SIGTERM, &action, nullptr) < 0) {
+        syslog(LOG_ERR, "Unable to registery SIGTERM handler");
+        exit(EXIT_FAILURE);
+    }
+    // Ignore SIGPIP so we don't crash libhttp
+    signal(SIGPIPE, SIG_IGN);
 
     serviceThread(ami_ini, io_conn);
 
@@ -90,7 +102,7 @@ int main(int argc, char *argv[])
 /// termination signal it will tell the HTTP server to stop, allowing the application to continue on and stop.
 void signalHandler(int signum)
 {
-    if (g_server && signum == SIGINT) {
+    if (g_server && signum == SIGTERM) {
         g_server->stop();
     }
 }
@@ -291,11 +303,12 @@ void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_serv
     // Setup Yealink phonebook URI
     auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
     auto const phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_adapter, std::chrono::minutes(60));
-    http_server->Get(phonebook_uri,
-                     [phonebook, phonebook_uri]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                         syslog(LOG_DEBUG, "Retrieving phonebook at %s", phonebook_uri.c_str());
-                         res.set_content(phonebook->getPhonebookString(), "text/xml");
-                     });
+    http_server->Get(
+        phonebook_uri,
+        [phonebook, phonebook_uri]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+            syslog(LOG_DEBUG, "Retrieving phonebook at %s", phonebook_uri.c_str());
+            res.set_content(phonebook->getPhonebookString(), "text/xml");
+        });
 }
 
 /// @brief Main service thread.
@@ -310,7 +323,6 @@ void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> c
     std::thread ami_ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
 
     g_server = std::make_unique<httplib::Server>();
-    signal(SIGINT, signalHandler);
 
     // Create phonebook service
     configurePhonebookService(g_server, io_conn, cfg_ini);
