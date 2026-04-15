@@ -58,6 +58,9 @@ int main(int argc, char *argv[])
     openlog("lamp_monitor", options, LOG_USER);
     syslog(LOG_DEBUG, "Starting lamp_monitor");
 
+    auto const log_level = ami_ini["settings"]["log_level"].as<int>();
+    setlogmask(LOG_UPTO(log_level));
+
     cpp_ami::util::ScopeGuard log_guard([]() -> void {
         syslog(LOG_DEBUG, "Stopping lamp_monitor");
         closelog();
