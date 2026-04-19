@@ -24,8 +24,14 @@ public:
     explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter);
     ~PJSIPWizardAdapter() override = default;
 
-    static std::shared_ptr<PJSIPWizardAdapter> create(std::shared_ptr<cpp_ami::Connection> const &conn,
-                                                      YAML::Node const &config);
+    /// @brief Creates a new object using configuration parameters from \c config.
+    ///
+    /// @param config Configuration parameters for object.
+    /// @param conn Pointer Asterisk AMI connection.
+    ///
+    /// @return Pointer to new adapter object.
+    static std::shared_ptr<PJSIPWizardAdapter> create(YAML::Node const &config,
+                                                      std::shared_ptr<cpp_ami::Connection> const &conn);
 
     /// @brief Returns a collection of caller ID details.
     std::vector<phonebook::CallerIDInfo> getPhonebookDetails() const override;

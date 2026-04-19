@@ -20,6 +20,11 @@ public:
     explicit PhoneUI(std::string name);
     ~PhoneUI() override = default;
 
+    /// @brief Creates a new object of this type using parameters from \c config.
+    ///
+    /// @param config Configuration parametrs for this object.
+    ///
+    /// @return Pointer to new object.
     static std::pair<std::string, std::shared_ptr<ui::PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Populates \c action with PJSIP notification text compatible with Yealink deskphones.
@@ -27,7 +32,14 @@ public:
     /// @param action Action to populate with a Yealink compatible payload.
     void initialize(cpp_ami::action::PJSIPNotify &action) override;
 
+    /// @brief Pushes the HTTP button, returning HTTP body with result.
+    ///
+    /// @return HTTP result body.
     std::string httpPushButton() override;
+
+    /// @brief Returns the HTTP content type for text created by this object.
+    ///
+    /// @return HTTP content type for text created by this object.
     std::string getContentType() override;
 
     /// @brief Creates an XML browser text body compatible with Yealink deskphones.

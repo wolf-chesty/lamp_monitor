@@ -30,6 +30,9 @@ public:
     /// @return Expected state of the deskphone. String can be sent to the deskphone to update its state.
     std::string httpPushButton() override;
 
+    /// @brief Returns content type for HTTP text created by this object.
+    ///
+    /// @return HTTP content type.
     std::string getContentType() override;
 
 private:

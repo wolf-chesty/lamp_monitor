@@ -13,11 +13,11 @@ HTTPPhonebook::HTTPPhonebook(std::shared_ptr<Adapter> phonebook_adapter)
 {
 }
 
-std::shared_ptr<HTTPPhonebook> HTTPPhonebook::create(std::shared_ptr<Adapter> const &adapter, YAML::Node const &config)
+std::shared_ptr<HTTPPhonebook> HTTPPhonebook::create(YAML::Node const &config, std::shared_ptr<Adapter> const &adapter)
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "yealink") {
-        return xml::yealink::XMLPhonebook::create(adapter, config);
+        return xml::yealink::XMLPhonebook::create(config, adapter);
     }
     assert(false);
     return nullptr;

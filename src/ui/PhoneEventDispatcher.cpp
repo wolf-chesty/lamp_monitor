@@ -20,14 +20,14 @@ PhoneEventDispatcher::PhoneEventDispatcher(std::shared_ptr<cpp_ami::Connection> 
 
     messages_.reserve(128);
 
-    startWorkThread();
+    startDispatchThread();
 }
 
 PhoneEventDispatcher::~PhoneEventDispatcher()
 {
     syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::~PhonePJSIPNotifyBridge()");
 
-    stopWorkThread();
+    stopDispatchThread();
 }
 
 void PhoneEventDispatcher::dispatch(cpp_ami::action::PJSIPNotify const &action)
@@ -39,15 +39,15 @@ void PhoneEventDispatcher::dispatch(cpp_ami::action::PJSIPNotify const &action)
     messages_cv_.notify_one();
 }
 
-void PhoneEventDispatcher::startWorkThread()
+void PhoneEventDispatcher::startDispatchThread()
 {
     work_thread_run_ = true;
-    work_thread_ = std::thread(&PhoneEventDispatcher::workThread, this);
+    work_thread_ = std::thread(&PhoneEventDispatcher::dispatchThread, this);
 
     pthread_setname_np(work_thread_.native_handle(), "phone_bridge");
 }
 
-void PhoneEventDispatcher::stopWorkThread()
+void PhoneEventDispatcher::stopDispatchThread()
 {
     work_thread_run_ = false;
     messages_cv_.notify_one();
@@ -56,7 +56,7 @@ void PhoneEventDispatcher::stopWorkThread()
     work_thread_.join();
 }
 
-void PhoneEventDispatcher::workThread()
+void PhoneEventDispatcher::dispatchThread()
 {
     syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::workThread() : Start thread");
 

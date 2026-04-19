@@ -16,8 +16,8 @@ PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_c
 {
 }
 
-std::shared_ptr<PJSIPWizardAdapter> PJSIPWizardAdapter::create(std::shared_ptr<cpp_ami::Connection> const &conn,
-                                                               YAML::Node const &config)
+std::shared_ptr<PJSIPWizardAdapter> PJSIPWizardAdapter::create(YAML::Node const &config,
+                                                               std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     assert(config["type"].as<std::string>() == "wizard");
     return std::make_shared<PJSIPWizardAdapter>(conn, config["filter"].as<std::string>());

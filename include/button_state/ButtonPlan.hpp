@@ -33,10 +33,27 @@ public:
     explicit ButtonPlan(std::string name, std::shared_ptr<ui::PhoneEventDispatcher> ami_bridge);
     ~ButtonPlan() = default;
 
+    /// @brief Creates a new object using configuration paramters from \c config.
+    ///
+    /// @param config Configuration parameters for object.
+    /// @param ami_bridge Pointer to object that pushes phone state to deskphones.
+    ///
+    /// @return Pointer to new object.
     static std::shared_ptr<ButtonPlan> create(YAML::Node const &config,
                                               std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge);
 
+    /// @brief Returns the name of the object.
+    ///
+    /// @return Name of object.
     std::string const &getName() const;
+
+    /// @brief Adds button state object.
+    ///
+    /// @param button_id ID of button.
+    /// @param button Pointer to button state.
+    ///
+    /// @return \c true if button state with \c button_id was successfully added.
+    bool addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button);
 
     /// @brief Returns button for \c button_id.
     ///
@@ -78,12 +95,20 @@ public:
     /// This function is invoked whenever a button state changes.
     void invalidate(uint16_t const button_id);
 
-    void addEventHandler(uint16_t id, std::shared_ptr<asterisk::EventHandler> const &event_handler);
+    /// @brief Adds an event handler to this object.
+    ///
+    /// @param id ID of the event handler.
+    /// @param event_handler Pointer to event handler.
+    ///
+    /// @return \c true if event handler with \c id was successfully added.
+    bool addEventHandler(uint16_t id, std::shared_ptr<asterisk::EventHandler> const &event_handler);
 
+    /// @brief Returns event handler with ID \c id.
+    ///
+    /// @param id ID of event handler to retrieve.
+    ///
+    /// @return Pointer to event handler.
     std::shared_ptr<asterisk::EventHandler> getEventHandler(uint16_t const id);
-
-protected:
-    void addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button);
 
 private:
     std::string name_;                                                        ///< Plan name.
@@ -92,8 +117,9 @@ private:
     std::shared_mutex buttons_mut_;                                           ///< Mutex on button collection.
     std::unordered_map<std::string, std::shared_ptr<ui::PhoneUI>> phone_uis_; ///< Phone UI's to render this object.
     std::shared_mutex phone_uis_mut_;                                         ///< Mutex on phone UI collection.
-    std::unordered_map<uint16_t, std::shared_ptr<asterisk::EventHandler>> event_handlers_;
-    std::shared_mutex event_handlers_mut_;
+    std::unordered_map<uint16_t, std::shared_ptr<asterisk::EventHandler>>
+        event_handlers_; ///< Collection of event handlers that can change button states managed by this object.
+    std::shared_mutex event_handlers_mut_; ///< Mutex on \c event_handlers_.
 };
 
 } // namespace button_state

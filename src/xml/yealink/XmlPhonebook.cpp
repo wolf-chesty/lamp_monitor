@@ -16,8 +16,8 @@ XMLPhonebook::XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter
 {
 }
 
-std::shared_ptr<phonebook::HTTPPhonebook> XMLPhonebook::create(std::shared_ptr<phonebook::Adapter> const &adapter,
-                                                               YAML::Node const &config)
+std::shared_ptr<phonebook::HTTPPhonebook> XMLPhonebook::create(YAML::Node const &config,
+                                                               std::shared_ptr<phonebook::Adapter> const &adapter)
 {
     assert(config["type"].as<std::string>() == "yealink");
     std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};

@@ -24,8 +24,13 @@ public:
     Adapter() = default;
     virtual ~Adapter() = default;
 
-    static std::shared_ptr<Adapter> create(std::shared_ptr<cpp_ami::Connection> const &connection,
-                                           YAML::Node const &config);
+    /// @brief Factory function that will create the appropriate adapter object specified in \c config.
+    ///
+    /// @param config Configuration parameters.
+    /// @param conn Pointer to AMI Asterisk connection.
+    ///
+    /// @return Pointer to new object.
+    static std::shared_ptr<Adapter> create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn);
 
     /// @brief Returns a collection of caller ID details.
     virtual std::vector<CallerIDInfo> getPhonebookDetails() const = 0;

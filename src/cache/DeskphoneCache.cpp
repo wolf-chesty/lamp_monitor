@@ -14,14 +14,14 @@ DeskphoneCache::DeskphoneCache(std::string_view filename, std::chrono::milliseco
     syslog(LOG_DEBUG, "DeskphoneCache::DeskphoneCache(%s, %ld)", filename.data(), expiry_.count());
 
     initializeDatabase();
-    startWorkThread();
+    startWriteThread();
 }
 
 DeskphoneCache::~DeskphoneCache()
 {
     syslog(LOG_DEBUG, "DeskphoneCache::~DeskphoneCache()");
 
-    stopWorkThread();
+    stopWriteThread();
 
     auto connection = connection_pool_.getConnection();
 
@@ -122,15 +122,15 @@ void DeskphoneCache::forEachAOR(std::function<void(std::string const &)> const &
     }
 }
 
-void DeskphoneCache::startWorkThread()
+void DeskphoneCache::startWriteThread()
 {
     batch_write_run_ = true;
-    batch_write_thread_ = std::thread(&DeskphoneCache::workThread, this);
+    batch_write_thread_ = std::thread(&DeskphoneCache::writeThread, this);
 
     pthread_setname_np(batch_write_thread_.native_handle(), "db_writer");
 }
 
-void DeskphoneCache::stopWorkThread()
+void DeskphoneCache::stopWriteThread()
 {
     batch_write_run_ = false;
     batch_write_cv_.notify_one();
@@ -144,9 +144,9 @@ void DeskphoneCache::stopWorkThread()
 /// order to circumvent this this object will handle all writes from a single thread. This should slightly improve
 /// performance as writes are done in the background with the caveat being that any read immediately following the
 /// enqueueing of a write may be out of date.
-void DeskphoneCache::workThread()
+void DeskphoneCache::writeThread()
 {
-    syslog(LOG_DEBUG, "DeskphoneCache::workThread() : Start thread");
+    syslog(LOG_DEBUG, "DeskphoneCache::writeThread() : Start thread");
 
     // Rather than recompiling prepared statements for every iteration of this service thread this function will compile
     // the statements a single time for the duration of this thread.

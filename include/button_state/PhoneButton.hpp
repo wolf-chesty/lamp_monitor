@@ -26,6 +26,9 @@ public:
     /// @brief Represents the different button colors.
     enum class Color { Red, Green, Blue };
 
+    /// @enum FlashMode
+    ///
+    /// @brief Represents the flash mode of an active button.
     enum class FlashMode { Solid, Slow, Fast };
 
 public:
@@ -34,9 +37,17 @@ public:
                          bool const button_on = false);
     ~PhoneButton() = default;
 
-    static std::shared_ptr<PhoneButton> create(YAML::Node const &config,
-                                               std::weak_ptr<ButtonPlan> const &button_plan);
+    /// @brief Creates a new object using configuration parameters from \c config.
+    ///
+    /// @param config Configuration parameters.
+    /// @param button_plan Pointer to button plan that owns this object.
+    ///
+    /// @return Pointer to new phone button state object.
+    static std::shared_ptr<PhoneButton> create(YAML::Node const &config, std::weak_ptr<ButtonPlan> const &button_plan);
 
+    /// @brief Clones this object.
+    ///
+    /// @return Pointer to clone of this object.
     std::shared_ptr<PhoneButton> clone();
 
     /// @brief Returns the button ID on the deskphone.
@@ -44,6 +55,9 @@ public:
     /// @return Button ID.
     uint16_t getButtonID() const;
 
+    /// @brief Returns the label for the button.
+    ///
+    /// @return Button label.
     std::string getLabel() const;
 
     /// @brief Returns the button color.
@@ -76,8 +90,17 @@ protected:
     void triggerLampFieldUpdate();
 
 private:
+    /// @brief Converts YAML color type string to an enum.
+    ///
+    /// @param color_type YAML color type string.
+    ///
+    /// @return Enum color type.
     static Color toColor(std::string_view color_type);
 
+    /// @brief Converts YAML flash mode type string to an enum.
+    ///
+    /// @param flash_mode YAML flash mode type string.
+    ///    /// @return Enum flash type.
     static FlashMode toFlashMode(std::string_view flash_mode);
 
     std::weak_ptr<ButtonPlan> button_plan_;  ///< Pointer to lamp field that monitors this button.

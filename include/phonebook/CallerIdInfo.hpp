@@ -13,8 +13,8 @@ namespace phonebook {
 ///
 /// @brief Contains data for a caller ID record.
 struct CallerIDInfo {
-    std::string name;
-    std::string number;
+    std::string name;   ///< Caller ID name.
+    std::string number; ///< Caller ID number.
 };
 
 } // namespace phonebook

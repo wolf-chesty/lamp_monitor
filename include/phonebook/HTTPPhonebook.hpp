@@ -20,8 +20,13 @@ public:
     HTTPPhonebook(std::shared_ptr<Adapter> phonebook_adapter);
     virtual ~HTTPPhonebook() = default;
 
-    static std::shared_ptr<HTTPPhonebook> create(std::shared_ptr<Adapter> const &adapter,
-                                                          YAML::Node const &config);
+    /// @brief Creates a new object using parameters specified in \c config.
+    ///
+    /// @param config Configuration parameters for this object.
+    /// @param adapter Pointer to datasource adapter.
+    ///
+    /// @return Pointer to new object.
+    static std::shared_ptr<HTTPPhonebook> create(YAML::Node const &config, std::shared_ptr<Adapter> const &adapter);
 
     /// @brief Returns a phonebook string compatible with a deskphone.
     ///
@@ -31,6 +36,9 @@ public:
     /// compatible with their deskphone.
     virtual std::string getPhonebook() = 0;
 
+    /// @brief Returns the HTTP content type for this object.
+    ///
+    /// @return HTTP content type for this object.
     virtual std::string getContentType() = 0;
 
 protected:

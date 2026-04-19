@@ -59,6 +59,8 @@ std::shared_ptr<PhoneButton> ButtonPlan::getButton(uint16_t const button_id)
 
 void ButtonPlan::invalidate([[maybe_unused]] uint16_t const button_id)
 {
+    syslog(LOG_DEBUG, "ButtonPlan::invalidate() : Button state change for button plan %s", name_.c_str());
+
     std::shared_lock const lock(phone_uis_mut_);
     std::for_each(std::execution::par, phone_uis_.begin(), phone_uis_.end(),
                   [this, buttons = getButtons()](auto const &itr) -> void {
@@ -95,20 +97,22 @@ std::shared_ptr<ui::PhoneUI> ButtonPlan::getPhoneUI(std::string const &ui_type)
     return itr != phone_uis_.end() ? itr->second : nullptr;
 }
 
-void ButtonPlan::addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button)
+bool ButtonPlan::addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button)
 {
     std::lock_guard const lock(buttons_mut_);
-    if (auto const [_, added] = buttons_.emplace(button_id, button); !added) {
-        assert(added);
+    auto const [_, success] = buttons_.emplace(button_id, button);
+    if (!success) {
+        assert(success);
         syslog(LOG_WARNING, "Unable to add button %ud to plan '%s'", button_id, name_.c_str());
     }
+    return success;
 }
 
-void ButtonPlan::addEventHandler(uint16_t id, std::shared_ptr<asterisk::EventHandler> const &event_handler)
+bool ButtonPlan::addEventHandler(uint16_t id, std::shared_ptr<asterisk::EventHandler> const &event_handler)
 {
     std::lock_guard const lock(event_handlers_mut_);
     auto const [_, success] = event_handlers_.emplace(id, event_handler);
-    assert(success);
+    return success;
 }
 
 std::shared_ptr<asterisk::EventHandler> ButtonPlan::getEventHandler(uint16_t const id)

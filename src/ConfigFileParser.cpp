@@ -75,7 +75,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
 
         for (auto const adapter_yaml : config["adapters"]) {
             if (adapter_yaml["name"].as<std::string>() == name) {
-                auto adapter = phonebook::Adapter::create(conn, adapter_yaml);
+                auto adapter = phonebook::Adapter::create(adapter_yaml, conn);
                 adapters.emplace(name, adapter);
                 return adapter;
             }
@@ -95,7 +95,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
 
         // Create phonebook HTTP adapter
         auto const &phonebook_uri = phonebook_config["path"].as<std::string>();
-        auto const phonebook = phonebook::HTTPPhonebook::create(adapter, phonebook_config);
+        auto const phonebook = phonebook::HTTPPhonebook::create(phonebook_config, adapter);
         if (!phonebook) {
             syslog(LOG_ERR, "Failed creating HTTP phonebook for: %s", phonebook_uri.c_str());
             exit(EXIT_FAILURE);

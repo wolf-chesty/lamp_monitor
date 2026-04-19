@@ -33,13 +33,13 @@ public:
 
 private:
     /// @brief Starts the PJSIP notification dispatch thread.
-    void startWorkThread();
+    void startDispatchThread();
 
     /// @brief Stops the PJSIP notification dispatch thread.
-    void stopWorkThread();
+    void stopDispatchThread();
 
     /// @brief Thread that dispatches PJSIP notifications in the background.
-    void workThread();
+    void dispatchThread();
 
     std::shared_ptr<cpp_ami::Connection> io_conn_;       ///< Connection to Asterisk AMI server.
     std::shared_ptr<DeskphoneCache> deskphone_cache_;    ///< Cache of deskphones.

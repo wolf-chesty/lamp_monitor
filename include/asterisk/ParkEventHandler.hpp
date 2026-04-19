@@ -29,12 +29,25 @@ public:
                               std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot);
     ~ParkEventHandler() override;
 
+    /// @brief Creates an object of this type using the parameters from \c config.
+    ///
+    /// @param config Configuration parameters for this object.
+    /// @param phone_button Application button for application state change delegation.
+    /// @param conn Asterisk AMI connection to monitor for Asterisk events.
+    ///
+    /// @return Pointer to new object.
     static std::shared_ptr<ParkEventHandler> create(YAML::Node const &config,
                                                     std::weak_ptr<button_state::PhoneButton> const &phone_button,
                                                     std::shared_ptr<cpp_ami::Connection> const &conn);
 
+    /// @brief Returns type for this object.
+    ///
+    /// @return Event type.
     EventType getType() const override;
 
+    /// @brief Returns the parking log that is being monitored for new parking events.
+    ///
+    /// @return Name of monitored parking lot.
     std::string getParkingLot() const;
 
 private:

@@ -8,12 +8,11 @@
 
 using namespace phonebook;
 
-std::shared_ptr<Adapter> Adapter::create(std::shared_ptr<cpp_ami::Connection> const &connection,
-                                         YAML::Node const &config)
+std::shared_ptr<Adapter> Adapter::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "wizard") {
-        return adapter::PJSIPWizardAdapter::create(connection, config);
+        return adapter::PJSIPWizardAdapter::create(config, conn);
     }
     assert(false);
     return nullptr;

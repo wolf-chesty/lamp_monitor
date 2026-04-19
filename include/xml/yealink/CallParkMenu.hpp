@@ -51,8 +51,17 @@ public:
     /// This function will create an XML browser string containing details of the call parked at \c park_exten.
     std::string httpPushButton(std::string const &park_exten) const override;
 
+    /// @brief Displays an error message on the desktop phone.
+    ///
+    /// @param title Title for error message.
+    /// @param text Text to display in error message.
+    ///
+    /// @return Error message formatted for display on the desktop phone.
     std::string displayErrorMessage(std::string const &title, std::string const &text) const override;
 
+    /// @brief HTTP content type for HTTP messages produced by this object.
+    ///
+    /// @return HTTP content type for text produced by this object.
     std::string getContentType() const override;
 
 private:

@@ -25,12 +25,22 @@ public:
     PhoneUI(std::string name);
     virtual ~PhoneUI();
 
+    /// @brief Creates a new object using parameters in \c config.
+    ///
+    /// @param config Configuration parameters.
+    ///
+    /// @return Pointer to new object.
     static std::pair<std::string, std::shared_ptr<PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Invoked whenever the button state for a lamp field is updated.
     ///
     /// @param buttons Collection of buttons that have had their state changed.
     void update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons);
+
+    /// @brief Returns the object name.
+    ///
+    /// @return Object name.
+    std::string getName();
 
     /// @brief Can be invoked by users of this object to get a string representation of the phones UI.
     ///
@@ -49,8 +59,6 @@ public:
     virtual void initialize(cpp_ami::action::PJSIPNotify &action) = 0;
 
 protected:
-    std::string getName();
-
     /// @brief Provides an atomic operation to return the current cached phone state.
     ///
     /// @return Pointer to the current phone UI state.

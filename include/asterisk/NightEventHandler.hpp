@@ -30,12 +30,25 @@ public:
                                std::string context, std::string device);
     ~NightEventHandler() override;
 
+    /// @brief Creates an object of this type using the parameters from \c config.
+    ///
+    /// @param config Configuration parameters for object.
+    /// @param phone_button Application button for application state change delegation.
+    /// @param conn Asterisk AMI connection to monitor for Asterisk events.
+    ///
+    /// @return Pointer to new object.
     static std::shared_ptr<NightEventHandler> create(YAML::Node const &config,
                                                      std::weak_ptr<button_state::PhoneButton> const &phone_button,
                                                      std::shared_ptr<cpp_ami::Connection> const &conn);
 
+    /// @brief Returns type for this object.
+    ///
+    /// @return Event type.
     EventType getType() const override;
 
+    /// @brief Returns the device that represents the night state on the Asterisk system.
+    ///
+    /// @return Name of the Asterisk device that keeps the Asterisk night state.
     std::string getDevice();
 
 private:

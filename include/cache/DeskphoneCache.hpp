@@ -24,19 +24,30 @@ public:
     using time_point_t = clock_t::time_point;
 
 protected:
+    /// @enum SQL action for write thread.
+    ///
+    /// @brief Identifies the SQL action to perform in the write thread.
     enum class SQLAction { remove, insert };
 
+    /// @struct HandesetData
+    ///
+    /// @brief Metadata for use by the objects write thread.
     struct HandsetData {
-        SQLAction action;
-        std::string aor;
-        std::string endpoint;
-        int64_t expiry;
+        SQLAction action;     ///< SQL action to perform.
+        std::string aor;      ///< AOR of record.
+        std::string endpoint; ///< Endpoint details of AOR object.
+        int64_t expiry;       ///< Expiry timestamp of AOR record.
     };
 
 public:
     explicit DeskphoneCache(std::string_view filename, std::chrono::milliseconds expiry);
     ~DeskphoneCache();
 
+    /// @brief Creates a new object using parameters from configuration \c config.
+    ///
+    /// @param config Configuration options for object.
+    ///
+    /// @return Pointer to new deskphone cache object.
     static std::shared_ptr<DeskphoneCache> create(YAML::Node const &config);
 
     /// @brief Adds deskphone details to the cache.
@@ -63,13 +74,13 @@ private:
     void initializeDatabase();
 
     /// @brief Starts the batch writing thread.
-    void startWorkThread();
+    void startWriteThread();
 
     /// @brief Stops the batch writing thread.
-    void stopWorkThread();
+    void stopWriteThread();
 
     /// @brief Performs batch writing to the database.
-    void workThread();
+    void writeThread();
 
     dbpool::sqlite::ConnectionPool connection_pool_; ///< Database connection pool for multi-threaded access.
     std::chrono::milliseconds expiry_;               ///< Liveliness for deskphone details in the database.
