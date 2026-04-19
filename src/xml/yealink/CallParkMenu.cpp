@@ -134,7 +134,7 @@ std::string CallParkMenu::httpPushButton(std::string const &park_exten) const
     auto const ami_response_list = dynamic_cast<cpp_ami::reaction::EventList const *>(ami_response.get());
     assert(ami_response_list);
 
-    std::string message{"No parked calls."};
+    std::string message = fmt::format("No parked call at extension {}.", park_exten);
     ami_response_list->forEach([&message, &park_exten](cpp_ami::event::Event const &event) mutable -> bool {
         if (event["ParkingSpace"] != park_exten) {
             return false;

@@ -278,7 +278,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
 
         // Configure HTTP buttons for the phone
         auto const phone_type = phone_cfg["type"].as<std::string>();
-        for (auto const &uri_cfg : phone_cfg["uris"]) {
+        for (auto const &uri_cfg : phone_cfg["paths"]) {
             configureHTTPButton(phone_type, uri_cfg, http_server, http_url, conn, button_plan, ui);
         }
     }

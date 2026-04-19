@@ -95,8 +95,10 @@ int main(int argc, char *argv[])
         std::chrono::seconds const period{120};
         auto ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, period, "ping_thread");
 
+        // Create HTTP phonebooks
         createPhonebooks(config_yaml["phonebooks"], *g_server, io_conn);
-
+        // Create Asterisk registration event handler; this object maintains the lifetimes of all button plans in use by
+        // the application.
         auto const phone_register_handler = createRegisterEventHandler(config_yaml, *g_server, io_conn);
 
         // httplib::Server::listen is a blocking call
