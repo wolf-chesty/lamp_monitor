@@ -4,6 +4,8 @@
 #ifndef XML_YEALINK_CALL_PARK_MENU_HPP
 #define XML_YEALINK_CALL_PARK_MENU_HPP
 
+#include "ui/HttpParkButton.hpp"
+
 #include <c++ami/Connection.hpp>
 #include <memory>
 #include <string>
@@ -18,10 +20,11 @@ namespace xml::yealink {
 /// This object can interact with the Asterisk server and return a list of parked phone calls that can be retrieved from
 /// parking using XML compatible with Yealink Android based deskphones. Objects can also create screens to view the
 /// details of parked calls.
-class CallParkMenu {
+class CallParkMenu : public ui::HTTPParkButton {
 public:
-    explicit CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parked_call_info_uri);
-    ~CallParkMenu() = default;
+    explicit CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
+                          std::string parked_call_info_uri);
+    ~CallParkMenu() override = default;
 
     /// @brief Creates an XML browser string containing a YealinkIPPhoneTextScreen body to display on a deskphone.
     ///
@@ -37,7 +40,7 @@ public:
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
     ///
     /// @return XML browser string to be displayed by a Yealink IP deskphone.
-    std::string getParkedCallMenu() const;
+    std::string httpPushButton() const override;
 
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
     ///
@@ -46,7 +49,11 @@ public:
     /// @return XML browser string to be displayed on a Yealink IP deskphone.
     ///
     /// This function will create an XML browser string containing details of the call parked at \c park_exten.
-    std::string getParkedCallDetails(std::string const &park_exten) const;
+    std::string httpPushButton(std::string const &park_exten) const override;
+
+    std::string displayErrorMessage(std::string const &title, std::string const &text) const override;
+
+    std::string getContentType() const override;
 
 private:
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
@@ -68,6 +75,7 @@ private:
     static std::string createNoParkedCallMessage();
 
     std::shared_ptr<cpp_ami::Connection> io_conn_; ///< Pointer to AMI Asterisk connection.
+    std::string parking_lot_;                      ///< Parking lot to get calls for.
     std::string parked_call_info_uri_;             ///< URI for parked call info.
 };
 

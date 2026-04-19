@@ -4,7 +4,7 @@
 #ifndef XML_YEALINK_XML_PHONEBOOK_HPP
 #define XML_YEALINK_XML_PHONEBOOK_HPP
 
-#include "phonebook/PhonebookStringCreator.hpp"
+#include "phonebook/HTTPPhonebook.hpp"
 
 #include <chrono>
 #include <mutex>
@@ -16,7 +16,7 @@ namespace xml::yealink {
 /// @namespace xml::yealink
 ///
 /// @brief Creates XML browser phonebook compatible with display on Yealink IP deskphones.
-class XMLPhonebook : public phonebook::PhonebookStringCreator {
+class XMLPhonebook : public phonebook::HTTPPhonebook {
 public:
     using clock_t = std::chrono::steady_clock;
 
@@ -24,10 +24,15 @@ public:
     explicit XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry);
     ~XMLPhonebook() override = default;
 
+    static std::shared_ptr<phonebook::HTTPPhonebook> create(std::shared_ptr<phonebook::Adapter> const &adapter,
+                                                                     YAML::Node const &config);
+
     /// @brief Returns XML browser phonebook.
     ///
     /// @return String containing XML browser phonebook compatible with Yealink IP deskphones.
-    std::string getPhonebookString() override;
+    std::string getPhonebook() override;
+
+    std::string getContentType() override;
 
 private:
     clock_t::time_point timestamp_{}; ///< Timestamp for last time XML data was created.

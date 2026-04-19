@@ -6,10 +6,11 @@
 
 #include <atomic>
 #include <memory>
+#include <yaml-cpp/yaml.h>
 
 namespace button_state {
 
-class LampField;
+class ButtonPlan;
 
 /// @class PhoneButton
 /// @namespace button_state
@@ -25,27 +26,35 @@ public:
     /// @brief Represents the different button colors.
     enum class Color { Red, Green, Blue };
 
+    enum class FlashMode { Solid, Slow, Fast };
+
 public:
-    explicit PhoneButton(uint16_t const button_id, Color const color, bool const flash, bool const is_critical = false,
+    explicit PhoneButton(std::weak_ptr<ButtonPlan> button_plan, uint16_t const button_id, Color const color,
+                         FlashMode const flash_mode, bool const critical_when_on, bool const critical_when_off,
                          bool const button_on = false);
-    explicit PhoneButton(std::shared_ptr<LampField> lamp_field, uint16_t const button_id, Color const color,
-                         bool const flash, bool const is_critical = false, bool const button_on = false);
     ~PhoneButton() = default;
+
+    static std::shared_ptr<PhoneButton> create(YAML::Node const &config,
+                                               std::weak_ptr<ButtonPlan> const &button_plan);
+
+    std::shared_ptr<PhoneButton> clone();
 
     /// @brief Returns the button ID on the deskphone.
     ///
     /// @return Button ID.
-    uint16_t buttonID() const;
+    uint16_t getButtonID() const;
+
+    std::string getLabel() const;
 
     /// @brief Returns the button color.
     ///
     /// @return Button color.
-    Color color() const;
+    Color getColor() const;
 
-    /// @brief Returns \c true if the button should flash.
+    /// @brief Returns flash mode of the button when it is active.
     ///
-    /// @return \c true if button flashes when in the on state.
-    bool flash() const;
+    /// @return \c FlashMode for the button.
+    FlashMode getFlashMode() const;
 
     /// @brief Returns \c true if the button is in the on state.
     ///
@@ -62,28 +71,23 @@ public:
     /// @return \c true if button requires phone screen update.
     bool isCritical() const;
 
-    /// @brief Sets the buttons critical state.
-    ///
-    /// @param is_critical New critical state.
-    void setIsCritical(bool const is_critical);
-
-    /// @brief Sets the buttons on and critical state.
-    ///
-    /// @param is_on Flag indicating if the button should be in the on state.
-    /// @param is_critical Flag indicating if the button should be in the critical state.
-    void setState(bool const is_on, bool const is_critical);
-
 protected:
     /// @brief Updates the lamp field with the new button state.
     void triggerLampFieldUpdate();
 
 private:
-    std::shared_ptr<LampField> lamp_field_; ///< Pointer to lamp field that monitors this button.
-    uint16_t button_id_{};                  ///< Button ID in lamp field.
-    Color color_{Color::Red};               ///< Button color for deskphones that support color displays.
-    bool flash_{false};                     ///< Button should flash.
-    std::atomic<bool> is_critical_{false};  ///< Flag indicating phone screen should be updated.
-    std::atomic<bool> button_on_{false};    ///< Current button state.
+    static Color toColor(std::string_view color_type);
+
+    static FlashMode toFlashMode(std::string_view flash_mode);
+
+    std::weak_ptr<ButtonPlan> button_plan_;  ///< Pointer to lamp field that monitors this button.
+    uint16_t button_id_{};                   ///< Button ID in lamp field.
+    std::string label_;                      ///< Button label.
+    Color color_{Color::Red};                ///< Button color for deskphones that support color displays.
+    FlashMode flash_mode_{FlashMode::Solid}; ///< Flash mode for on button.
+    bool critical_when_on_{false};           ///< Flag indicating message is critical when button is on.
+    bool critical_when_off_{false};          ///< Flag indicating message is critical when button is off.
+    std::atomic<bool> button_on_{false};     ///< Current button state.
 };
 
 } // namespace button_state

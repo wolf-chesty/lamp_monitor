@@ -7,17 +7,21 @@
 #include "phonebook/Adapter.hpp"
 #include <memory>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace phonebook {
 
-/// @class PhonebookStringCreator
+/// @class HTTPPhonebook
 /// @namespace phonebook
 ///
 /// @brief Provides an interface for classes that create phonebook text that is compatible with deskphones.
-class PhonebookStringCreator {
+class HTTPPhonebook {
 public:
-    PhonebookStringCreator(std::shared_ptr<Adapter> phonebook_adapter);
-    virtual ~PhonebookStringCreator() = default;
+    HTTPPhonebook(std::shared_ptr<Adapter> phonebook_adapter);
+    virtual ~HTTPPhonebook() = default;
+
+    static std::shared_ptr<HTTPPhonebook> create(std::shared_ptr<Adapter> const &adapter,
+                                                          YAML::Node const &config);
 
     /// @brief Returns a phonebook string compatible with a deskphone.
     ///
@@ -25,7 +29,9 @@ public:
     ///
     /// Implementors of this function will need to create a string containing phonebook data that is
     /// compatible with their deskphone.
-    virtual std::string getPhonebookString() = 0;
+    virtual std::string getPhonebook() = 0;
+
+    virtual std::string getContentType() = 0;
 
 protected:
     /// @brief Returns the phonebook adapter for this object.

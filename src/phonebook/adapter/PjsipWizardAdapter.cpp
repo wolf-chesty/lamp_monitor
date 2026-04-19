@@ -4,6 +4,7 @@
 #include "phonebook/adapter/PjsipWizardAdapter.hpp"
 
 #include <c++ami/action/GetConfigJson.hpp>
+#include <cassert>
 #include <regex>
 #include <yaml-cpp/yaml.h>
 
@@ -13,6 +14,13 @@ PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_c
     : io_conn_(std::move(io_conn))
     , filter_(std::move(filter))
 {
+}
+
+std::shared_ptr<PJSIPWizardAdapter> PJSIPWizardAdapter::create(std::shared_ptr<cpp_ami::Connection> const &conn,
+                                                               YAML::Node const &config)
+{
+    assert(config["type"].as<std::string>() == "wizard");
+    return std::make_shared<PJSIPWizardAdapter>(conn, config["filter"].as<std::string>());
 }
 
 /// Parses the Asterisk pjsip_wizard.conf file, returning the caller ID information for each AOR endpoint found.

@@ -9,10 +9,32 @@
 
 using namespace xml::yealink;
 
+PhoneUI::PhoneUI(std::string name)
+    : ui::PhoneUI(std::move(name))
+{
+}
+
+std::pair<std::string, std::shared_ptr<ui::PhoneUI>> PhoneUI::create(YAML::Node const &config)
+{
+    auto const ui = std::make_shared<PhoneUI>(config["name"].as<std::string>());
+    return std::make_pair(ui->getName(), ui);
+}
+
 void PhoneUI::initialize(cpp_ami::action::PJSIPNotify &action)
 {
     action.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",
-                                  fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(toString()))});
+                                  fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(getStateString()))});
+}
+
+std::string PhoneUI::httpPushButton()
+{
+    return getStateString();
+}
+
+std::string PhoneUI::getContentType()
+{
+    static std::string const content_type("text/xml");
+    return content_type;
 }
 
 char const *PhoneUI::toColorString(button_state::PhoneButton::Color const color)
@@ -42,11 +64,22 @@ char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button
 {
     static constexpr char const *const BUTTON_STATE_OFF = "off";
     static constexpr char const *const BUTTON_STATE_ON = "on";
-    static constexpr char const *const BUTTON_STATE_FLASH = "slowflash";
+    static constexpr char const *const BUTTON_STATE_FLASH_SLOW = "slowflash";
+    static constexpr char const *const BUTTON_STATE_FLASH_FAST = "fastflash";
 
     char const *button_state = BUTTON_STATE_OFF;
     if (button.isOn()) {
-        button_state = button.flash() ? BUTTON_STATE_FLASH : BUTTON_STATE_ON;
+        switch (button.getFlashMode()) {
+        case button_state::PhoneButton::FlashMode::Solid:
+            button_state = BUTTON_STATE_ON;
+            break;
+        case button_state::PhoneButton::FlashMode::Fast:
+            button_state = BUTTON_STATE_FLASH_FAST;
+            break;
+        case button_state::PhoneButton::FlashMode::Slow:
+            button_state = BUTTON_STATE_FLASH_SLOW;
+            break;
+        }
     }
     return button_state;
 }
@@ -88,8 +121,8 @@ std::pair<pugi::xml_document, bool> PhoneUI::createYealinkXML(std::shared_ptr<bu
 
     assert(button);
     auto button_xml = execute_xml.append_child("ExecuteItem");
-    button_xml.append_attribute("URI") = fmt::format("Led:LINE{}_{}={}", button->buttonID(),
-                                                     toColorString(button->color()), toButtonStateString(*button));
+    button_xml.append_attribute("URI") = fmt::format("Led:LINE{}_{}={}", button->getButtonID(),
+                                                     toColorString(button->getColor()), toButtonStateString(*button));
     critical |= button->isCritical();
     execute_xml.append_attribute("Beep") = critical ? "yes" : "no";
 
@@ -110,8 +143,8 @@ std::pair<pugi::xml_document, bool>
     assert(!buttons.empty());
     for (auto const &button : buttons) {
         auto button_xml = execute_xml.append_child("ExecuteItem");
-        button_xml.append_attribute("URI") = fmt::format("Led:LINE{}_{}={}", button->buttonID(),
-                                                         toColorString(button->color()), toButtonStateString(*button));
+        button_xml.append_attribute("URI") = fmt::format(
+            "Led:LINE{}_{}={}", button->getButtonID(), toColorString(button->getColor()), toButtonStateString(*button));
         critical |= button->isCritical();
     }
     execute_xml.append_attribute("Beep") = critical ? "yes" : "no";

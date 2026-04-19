@@ -3,6 +3,7 @@
 
 #include "xml/yealink/XmlPhonebook.hpp"
 
+#include <cassert>
 #include <pugixml.hpp>
 #include <sstream>
 #include <syslog.h>
@@ -10,12 +11,20 @@
 using namespace xml::yealink;
 
 XMLPhonebook::XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry)
-    : PhonebookStringCreator(std::move(phonebook_adapter))
+    : HTTPPhonebook(std::move(phonebook_adapter))
     , expiry_(expiry)
 {
 }
 
-std::string XMLPhonebook::getPhonebookString()
+std::shared_ptr<phonebook::HTTPPhonebook> XMLPhonebook::create(std::shared_ptr<phonebook::Adapter> const &adapter,
+                                                               YAML::Node const &config)
+{
+    assert(config["type"].as<std::string>() == "yealink");
+    std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
+    return std::make_shared<XMLPhonebook>(adapter, expiry);
+}
+
+std::string XMLPhonebook::getPhonebook()
 {
     syslog(LOG_DEBUG, "XMLPhonebook::getPhonebookString() : Creating phonebook screen");
 
@@ -52,4 +61,9 @@ std::string XMLPhonebook::getPhonebookString()
     phonebook_xml_ = xml_string.str();
 
     return phonebook_xml_;
+}
+
+std::string XMLPhonebook::getContentType()
+{
+    return "text/xml";
 }

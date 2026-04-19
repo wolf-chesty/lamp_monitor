@@ -5,7 +5,10 @@
 #define PHONEBOOK_ADAPTER_HPP
 
 #include "phonebook/CallerIdInfo.hpp"
+#include <c++ami/Connection.hpp>
+#include <memory>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 namespace phonebook {
 
@@ -20,6 +23,9 @@ class Adapter {
 public:
     Adapter() = default;
     virtual ~Adapter() = default;
+
+    static std::shared_ptr<Adapter> create(std::shared_ptr<cpp_ami::Connection> const &connection,
+                                           YAML::Node const &config);
 
     /// @brief Returns a collection of caller ID details.
     virtual std::vector<CallerIDInfo> getPhonebookDetails() const = 0;

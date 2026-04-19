@@ -24,6 +24,9 @@ public:
     explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter);
     ~PJSIPWizardAdapter() override = default;
 
+    static std::shared_ptr<PJSIPWizardAdapter> create(std::shared_ptr<cpp_ami::Connection> const &conn,
+                                                      YAML::Node const &config);
+
     /// @brief Returns a collection of caller ID details.
     std::vector<phonebook::CallerIDInfo> getPhonebookDetails() const override;
 
@@ -32,6 +35,6 @@ private:
     std::string filter_;                           ///< Filter for pjsip_wizard clients to grab caller ID details for.
 };
 
-} // namespace phonebook
+} // namespace phonebook::adapter
 
 #endif

@@ -3,13 +3,16 @@
 
 #include "ui/PhoneUi.hpp"
 
+#include "xml/yealink/PhoneUi.hpp"
+#include <cassert>
 #include <fmt/core.h>
 #include <shared_mutex>
 #include <syslog.h>
 
 using namespace ui;
 
-PhoneUI::PhoneUI()
+PhoneUI::PhoneUI(std::string name)
+    : name_(std::move(name))
 {
     syslog(LOG_DEBUG, "PhoneUI::PhoneUI()");
 }
@@ -17,6 +20,16 @@ PhoneUI::PhoneUI()
 PhoneUI::~PhoneUI()
 {
     syslog(LOG_DEBUG, "PhoneUI::~PhoneUI()");
+}
+
+std::pair<std::string, std::shared_ptr<PhoneUI>> PhoneUI::create(YAML::Node const &config)
+{
+    auto const &type = config["type"].as<std::string>();
+    if (type == "yealink") {
+        return xml::yealink::PhoneUI::create(config);
+    }
+    assert(false);
+    return std::make_pair("", nullptr);
 }
 
 void PhoneUI::update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
@@ -41,7 +54,7 @@ void PhoneUI::setPhoneState(std::shared_ptr<PhoneUIState> const &state)
     cached_button_state_ = state;
 }
 
-std::string PhoneUI::toString()
+std::string PhoneUI::getStateString()
 {
     auto const state = getPhoneState();
     return state->toString();
@@ -51,4 +64,9 @@ bool PhoneUI::isCritical()
 {
     auto const state = getPhoneState();
     return state->isCritical();
+}
+
+std::string PhoneUI::getName()
+{
+    return name_;
 }

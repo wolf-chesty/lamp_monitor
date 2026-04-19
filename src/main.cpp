@@ -2,30 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 #include "ApplicationParameters.hpp"
-#include "ast_bridge/Deskphone.hpp"
-#include "ast_bridge/NightButton.hpp"
-#include "ast_bridge/ParkButton.hpp"
-#include "button_state/LampField.hpp"
-#include "phonebook/adapter/PjsipWizardAdapter.hpp"
-#include "ui/PhoneBridge.hpp"
-#include "xml/yealink/CallParkMenu.hpp"
-#include "xml/yealink/HttpNightButton.hpp"
-#include "xml/yealink/PhoneUi.hpp"
-#include "xml/yealink/XmlPhonebook.hpp"
+#include "asterisk/RegisterEventHandler.hpp"
+#include "button_state/ButtonPlan.hpp"
+#include "ConfigFileParser.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
 #include <c++ami/action/Logoff.hpp>
 #include <c++ami/action/Ping.hpp>
 #include <c++ami/Connection.hpp>
-#include <c++ami/util/ScopeGuard.hpp>
 #include <filesystem>
 #include <httplib.h>
-#include <inicpp.h>
 #include <memory>
 #include <string_view>
 #include <syslog.h>
 #include <unistd.h>
+#include <yaml-cpp/yaml.h>
 
 // Globals =============================================================================================================
 
@@ -37,10 +29,10 @@ std::unique_ptr<httplib::Server> g_server;
 ///
 /// The application is waiting for the HTTP server to spin down before continuing on. When the application encounters a
 /// termination signal it will tell the HTTP server to stop, allowing the application to continue on and stop.
-void signalHandler(int signum, siginfo_t *info, void *ptr)
+void signalHandler(int signum, [[maybe_unused]] siginfo_t *info, [[maybe_unused]] void *ptr)
 {
-    syslog(LOG_DEBUG, "Caught termination");
     if (g_server && signum == SIGTERM) {
+        syslog(LOG_DEBUG, "Stopping server");
         g_server->stop();
     }
 }
@@ -49,28 +41,91 @@ void signalHandler(int signum, siginfo_t *info, void *ptr)
 
 ApplicationParameters getApplicationParameters(int argc, char *argv[]);
 
-void login(std::shared_ptr<cpp_ami::Connection> const &ami_conn, ini::IniFile &cfg_ini, bool is_daemon);
-
-void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn);
+std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
+                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period,
+                                std::string_view thread_name);
 
 int main(int argc, char *argv[])
 {
     auto const args = getApplicationParameters(argc, argv);
 
-    ini::IniFile ami_ini;
-    ami_ini.load(args.config_file);
-
-    if (args.is_daemon) {
-        if (daemon(0, 0) == -1) {
-            syslog(LOG_CRIT, "Unable to daemonize");
-            exit(EXIT_FAILURE);
-        }
+    // Make sure that the config file exists
+    if (!std::filesystem::exists(args.config_file)) {
+        syslog(LOG_ERR, "Unable to find config file %s", args.config_file.c_str());
+        exit(EXIT_FAILURE);
     }
 
-    // Configure syslog
+    try {
+        // Load config file
+        auto const config_yaml = YAML::LoadFile(args.config_file);
+
+        // Fork to background if requested
+        if (args.is_daemon) {
+            if (daemon(0, 0) == -1) {
+                syslog(LOG_CRIT, "Unable to daemonize");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        configureSyslog(config_yaml["syslog"], "lamp_monitor", args.is_daemon);
+
+        // Create HTTP server
+        std::string http_addr;
+        uint16_t http_port{};
+        std::tie(g_server, http_addr, http_port) = createHTTPServer(config_yaml["http"]);
+
+        // Register SIGTERM handler
+        struct sigaction sa{};
+        memset(&sa, 0, sizeof(struct sigaction));
+        sa.sa_sigaction = signalHandler;
+        sa.sa_flags = SA_SIGINFO;
+        sigemptyset(&sa.sa_mask);
+        if (sigaction(SIGTERM, &sa, nullptr) < 0) {
+            syslog(LOG_ERR, "Unable to register SIGTERM handler");
+            exit(EXIT_FAILURE);
+        }
+
+        // Create AMI connection
+        auto const io_conn = createAMIConnection(config_yaml["ami"]);
+        // Ping AMI server so application doesn't get kicked
+        std::atomic<bool> thread_run_flag{true};
+        std::condition_variable cv;
+        std::chrono::seconds const period{120};
+        auto ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, period, "ping_thread");
+
+        createPhonebooks(config_yaml["phonebooks"], *g_server, io_conn);
+
+        auto const phone_register_handler = createRegisterEventHandler(config_yaml, *g_server, io_conn);
+
+        // httplib::Server::listen is a blocking call
+        g_server->listen(http_addr, http_port);
+
+        // Stop and join on ping thread
+        thread_run_flag = false;
+        cv.notify_all();
+        ping_thread.join();
+
+        // Logout of AMI; wait for the response before terminating
+        cpp_ami::action::Logoff const logoff;
+        auto const reaction = io_conn->invoke(logoff);
+    }
+    catch (std::exception const &e) {
+        syslog(LOG_CRIT, "Exception: %s", e.what());
+        exit(EXIT_FAILURE);
+    }
+
+    syslog(LOG_DEBUG, "Halting application");
+    closelog();
+
+    return EXIT_SUCCESS;
+
+    /*
+
     int const options = args.is_daemon ? LOG_NDELAY : (LOG_CONS | LOG_NDELAY);
     openlog("lamp_monitor", options, LOG_USER);
     syslog(LOG_DEBUG, "Starting lamp_monitor");
+
+
     // Set log level
     auto const log_level = ami_ini["settings"]["log_level"].as<int>();
     setlogmask(LOG_UPTO(log_level));
@@ -78,6 +133,8 @@ int main(int argc, char *argv[])
         syslog(LOG_DEBUG, "Stopping lamp_monitor");
         closelog();
     });
+
+
 
     // Create AMI connection
     auto const ami_hostname = ami_ini["ami"]["host"].as<std::string>();
@@ -104,6 +161,7 @@ int main(int argc, char *argv[])
     auto const reaction = io_conn->invoke(logoff);
 
     return EXIT_SUCCESS;
+    */
 }
 
 /// @brief Gets application parameters.
@@ -129,34 +187,13 @@ ApplicationParameters getApplicationParameters(int argc, char *argv[])
     return ApplicationParameters{parser.get<std::string>("config_ini"), parser.get<bool>("--daemon")};
 }
 
-/// @brief Logs the application into the Asterisk server.
-///
-/// @param conn Pointer to Asterisk AMI connection.
-/// @param cfg_ini INI configuration object.
-/// @param is_daemon Boolean flag indicating application is a running in daemon mode.
-void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_ini, bool is_daemon)
-{
-    // Create AMI Login action
-    auto const ami_username = cfg_ini["ami"]["username"].as<std::string>();
-    auto const ami_password = cfg_ini["ami"]["secret"].as<std::string>();
-    cpp_ami::action::Login login(ami_username, ami_password);
-    login["AuthType"] = "plain";
-    login["Events"] = "on";
-    // Send login to AMI
-    auto const reaction = conn->invoke(login);
-    // Confirm login
-    if (!reaction->isSuccess()) {
-        syslog(LOG_ERR, "Unable to login to AMI.");
-        exit(EXIT_FAILURE);
-    }
-}
-
 /// @brief Create a thread that will ping the AMI server.
 ///
 /// @param ami_conn AMI connection.
 /// @param cv Condition variable used to prematurely awaken the thread.
 /// @param run_thread_flag Flag used to stop the thread execution.
 /// @param period Period to sleep between pings.
+/// @param thread_name Thread name that should show up in top.
 ///
 /// @return \c thread object that holds a handle to the newly created thread.
 ///
@@ -164,7 +201,8 @@ void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_i
 /// order to avoid having the connection to the AMI server closed it is recommended for an application to start a thread
 /// that will periodically send a Ping action to the AMI server. This function creates that thread.
 std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
-                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period)
+                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period,
+                                std::string_view thread_name)
 {
     std::thread work_thread([&cv, &run_thread_flag, ami_conn, period, ping = cpp_ami::action::Ping()]() -> void {
         syslog(LOG_DEBUG, "Starting ping thread");
@@ -179,11 +217,12 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
         } while (run_thread_flag);
     });
 
-    pthread_setname_np(work_thread.native_handle(), "ping_ami");
+    pthread_setname_np(work_thread.native_handle(), thread_name.data());
 
     return work_thread;
 }
 
+/*
 /// @brief Creates deskphone cache object.
 ///
 /// @param cfg_ini Object containing configuration information.
@@ -201,6 +240,15 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(ini::IniFile &cfg_ini)
 /// @param http_server HTTP server that will interact with the deskphone UI.
 /// @param deskphone_cache Deskphone cache.
 /// @param cfg_ini Object containing configuration parameters.
+///
+/// This function will create a phone UI and attach a configuration specified HTTP URI endpoint to it. This HTTP URI
+/// will return the current state of the deskphone so that deskphones that have recently rebooted can query the current
+/// deskphone state on boot.
+///
+/// This HTTP endpoint will also expire the deskphone from the deskphone cache in the event tha deskphone can't render
+/// the returned deskphone state (in case the phone gets the URI before the phone screen has become ready). This will
+/// cause the application to publish the current deskphone state the next time the deskphone registers with the Asterisk
+/// server.
 std::shared_ptr<ui::PhoneUI> createPhoneUI(std::unique_ptr<httplib::Server> const &http_server,
                                            std::shared_ptr<DeskphoneCache> const &deskphone_cache,
                                            ini::IniFile &cfg_ini)
@@ -328,7 +376,7 @@ void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> c
 
     // Setup application to deskphone bridge; all application lamp fields can share these objects
     auto const deskphone_cache = createDeskphoneCache(cfg_ini);
-    auto const phone_bridge = std::make_shared<ui::PhoneBridge>(io_conn, deskphone_cache);
+    auto const phone_bridge = std::make_shared<ui::PhonePJSIPNotifyBridge>(io_conn, deskphone_cache);
 
     // Setup up application buttons (lamp fields are specific to hardware desk phones). The following is the
     // configuration for our sites deskphones.
@@ -351,3 +399,8 @@ void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> c
     cv.notify_all();
     ami_ping_thread.join();
 }
+
+void configSyslog(YAML::Node const &cfg)
+{
+}
+*/

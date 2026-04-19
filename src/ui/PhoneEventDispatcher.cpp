@@ -1,52 +1,53 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "ui/PhoneBridge.hpp"
+#include "ui/PhoneEventDispatcher.hpp"
 
 #include <cassert>
 #include <syslog.h>
 
 using namespace ui;
 
-PhoneBridge::PhoneBridge(std::shared_ptr<cpp_ami::Connection> io_conn, std::shared_ptr<DeskphoneCache> deskphone_cache)
+PhoneEventDispatcher::PhoneEventDispatcher(std::shared_ptr<cpp_ami::Connection> io_conn,
+                                           std::shared_ptr<DeskphoneCache> deskphone_cache)
     : io_conn_(std::move(io_conn))
     , deskphone_cache_(std::move(deskphone_cache))
 {
     assert(io_conn_);
     assert(deskphone_cache_);
 
-    syslog(LOG_DEBUG, "PhoneBridge::PhoneBridge()");
+    syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::PhonePJSIPNotifyBridge()");
 
     messages_.reserve(128);
 
     startWorkThread();
 }
 
-PhoneBridge::~PhoneBridge()
+PhoneEventDispatcher::~PhoneEventDispatcher()
 {
-    syslog(LOG_DEBUG, "PhoneBridge::~PhoneBridge()");
+    syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::~PhonePJSIPNotifyBridge()");
 
     stopWorkThread();
 }
 
-void PhoneBridge::dispatch(std::string const &phone_id, cpp_ami::action::PJSIPNotify const &action)
+void PhoneEventDispatcher::dispatch(cpp_ami::action::PJSIPNotify const &action)
 {
-    syslog(LOG_DEBUG, "PhoneBridge::dispatch(\"%s\", \"%s\")",phone_id.c_str(), action.toString().c_str());
+    syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::dispatch(\"%s\")", action.toString().c_str());
 
     std::lock_guard const lock(messages_mut_);
-    messages_.emplace_back(phone_id, action);
+    messages_.emplace_back(action);
     messages_cv_.notify_one();
 }
 
-void PhoneBridge::startWorkThread()
+void PhoneEventDispatcher::startWorkThread()
 {
     work_thread_run_ = true;
-    work_thread_ = std::thread(&PhoneBridge::workThread, this);
+    work_thread_ = std::thread(&PhoneEventDispatcher::workThread, this);
 
     pthread_setname_np(work_thread_.native_handle(), "phone_bridge");
 }
 
-void PhoneBridge::stopWorkThread()
+void PhoneEventDispatcher::stopWorkThread()
 {
     work_thread_run_ = false;
     messages_cv_.notify_one();
@@ -55,9 +56,9 @@ void PhoneBridge::stopWorkThread()
     work_thread_.join();
 }
 
-void PhoneBridge::workThread()
+void PhoneEventDispatcher::workThread()
 {
-    syslog(LOG_DEBUG, "PhoneBridge::workThread() : Start thread");
+    syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::workThread() : Start thread");
 
     decltype(messages_) messages;
     messages.reserve(messages_.capacity());
@@ -72,8 +73,8 @@ void PhoneBridge::workThread()
             break;
         }
 
-        for (auto const &itr : messages) {
-            deskphone_cache_->forEachAOR([this, action = itr.second](std::string_view aor) mutable -> void {
+        for (auto &action : messages) {
+            deskphone_cache_->forEachAOR([this, action](std::string_view aor) mutable -> void {
                 action["Endpoint"] = aor;
                 io_conn_->asyncInvoke(action);
             });
@@ -81,5 +82,5 @@ void PhoneBridge::workThread()
         messages.clear();
     }
 
-    syslog(LOG_DEBUG, "PhoneBridge::workThread() : Stop thread");
+    syslog(LOG_DEBUG, "PhonePJSIPNotifyBridge::workThread() : Stop thread");
 }

@@ -12,6 +12,7 @@
 #include <shared_mutex>
 #include <utility>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 namespace ui {
 
@@ -21,8 +22,10 @@ namespace ui {
 /// @brief Provides an interface for objects that can generate XML data specific to hardware deskphones.
 class PhoneUI {
 public:
-    PhoneUI();
+    PhoneUI(std::string name);
     virtual ~PhoneUI();
+
+    static std::pair<std::string, std::shared_ptr<PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Invoked whenever the button state for a lamp field is updated.
     ///
@@ -32,7 +35,7 @@ public:
     /// @brief Can be invoked by users of this object to get a string representation of the phones UI.
     ///
     /// @return String that can set a deskphones appearance.
-    std::string toString();
+    std::string getStateString();
 
     /// @brief Indicates whether the phone state is critical and should be forced onto the phone.
     ///
@@ -46,6 +49,8 @@ public:
     virtual void initialize(cpp_ami::action::PJSIPNotify &action) = 0;
 
 protected:
+    std::string getName();
+
     /// @brief Provides an atomic operation to return the current cached phone state.
     ///
     /// @return Pointer to the current phone UI state.
@@ -75,6 +80,7 @@ protected:
         createPhoneStateXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical) = 0;
 
 private:
+    std::string name_;                                  ///< Name for the phone UL.
     std::shared_ptr<PhoneUIState> cached_button_state_; ///< Current phone UI state.
     std::shared_mutex cached_button_state_mut_;         ///< Mutex on phone UI state.
 };

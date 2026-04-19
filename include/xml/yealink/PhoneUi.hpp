@@ -4,6 +4,7 @@
 #ifndef XML_YEALINK_PHONE_UI_HPP
 #define XML_YEALINK_PHONE_UI_HPP
 
+#include "ui/HttpStateButton.hpp"
 #include "ui/PhoneUi.hpp"
 
 namespace xml::yealink {
@@ -12,15 +13,22 @@ namespace xml::yealink {
 /// @namespace xml::yealink
 ///
 /// @brief Class generates XML browser code for Yealink deskphones.
-class PhoneUI : public ui::PhoneUI {
+class PhoneUI
+    : public ui::HTTPStateButton
+    , public ui::PhoneUI {
 public:
-    PhoneUI() = default;
+    explicit PhoneUI(std::string name);
     ~PhoneUI() override = default;
+
+    static std::pair<std::string, std::shared_ptr<ui::PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Populates \c action with PJSIP notification text compatible with Yealink deskphones.
     ///
     /// @param action Action to populate with a Yealink compatible payload.
     void initialize(cpp_ami::action::PJSIPNotify &action) override;
+
+    std::string httpPushButton() override;
+    std::string getContentType() override;
 
     /// @brief Creates an XML browser text body compatible with Yealink deskphones.
     ///

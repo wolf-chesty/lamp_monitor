@@ -13,8 +13,10 @@
 
 using namespace xml::yealink;
 
-CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parked_call_info_uri)
+CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
+                           std::string parked_call_info_uri)
     : io_conn_(std::move(io_conn))
+    , parking_lot_(std::move(parking_lot))
     , parked_call_info_uri_(std::move(parked_call_info_uri))
 {
     assert(io_conn_);
@@ -46,16 +48,23 @@ std::string CallParkMenu::createMessageXML(bool const beep, uint8_t const timeou
     return xml_string.str();
 }
 
-std::string CallParkMenu::getParkedCallMenu() const
+std::string CallParkMenu::httpPushButton() const
 {
     assert(io_conn_);
 
     cpp_ami::action::ParkedCalls parked_calls;
+    parked_calls["ParkingLot"] = parking_lot_;
     auto const ami_response = io_conn_->invoke(parked_calls);
     auto const ami_response_list = dynamic_cast<cpp_ami::reaction::EventList const *>(ami_response.get());
     assert(ami_response_list);
     return ami_response_list->eventCount() == 0 ? createNoParkedCallMessage()
                                                 : createParkedCallMenu(*ami_response_list);
+}
+
+std::string CallParkMenu::getContentType() const
+{
+    static std::string content_type{"text/xml"};
+    return content_type;
 }
 
 void createParkedCallNode(pugi::xml_node parked_call, std::string_view parked_call_info_uri,
@@ -114,12 +123,13 @@ std::string CallParkMenu::createNoParkedCallMessage()
     return createMessageXML(false, 5, "Parked Calls: 0", "No parked calls.");
 }
 
-std::string CallParkMenu::getParkedCallDetails(std::string const &park_exten) const
+std::string CallParkMenu::httpPushButton(std::string const &park_exten) const
 {
     syslog(LOG_DEBUG, "CallParkMenu::getParkedCallDetails(\"%s\")", park_exten.c_str());
 
     assert(io_conn_);
     cpp_ami::action::ParkedCalls parked_calls;
+    parked_calls["ParkingLot"] = parking_lot_;
     auto const ami_response = io_conn_->invoke(parked_calls);
     auto const ami_response_list = dynamic_cast<cpp_ami::reaction::EventList const *>(ami_response.get());
     assert(ami_response_list);
@@ -137,4 +147,9 @@ std::string CallParkMenu::getParkedCallDetails(std::string const &park_exten) co
     });
 
     return createMessageXML(false, 10, "Parked Call Detail", message);
+}
+
+std::string CallParkMenu::displayErrorMessage(std::string const &title, std::string const &text) const
+{
+    return CallParkMenu::createMessageXML(true, 5, title, text);
 }

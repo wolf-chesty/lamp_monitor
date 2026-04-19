@@ -22,7 +22,7 @@ HTTPNightButton::HTTPNightButton(std::shared_ptr<button_state::PhoneButton> phon
     assert(io_conn_);
 }
 
-std::string HTTPNightButton::pushButton()
+std::string HTTPNightButton::httpPushButton()
 {
     assert(button_);
     auto const button_on = !button_->isOn();
@@ -39,7 +39,13 @@ std::string HTTPNightButton::pushButton()
 
     // Return XML for new button state
     syslog(LOG_DEBUG, "HTTPNightButton::pushButton() : Setting night button to \"%s\"", button_on ? "on" : "off");
-    auto const inverted_button = std::make_shared<button_state::PhoneButton>(
-        button_->buttonID(), button_->color(), button_->flash(), button_->isCritical(), button_on);
+    auto const inverted_button = button_->clone();
+    inverted_button->setOn(button_on);
     return PhoneUI::createYealinkXMLString(inverted_button);
+}
+
+std::string HTTPNightButton::getContentType()
+{
+    static std::string content_type{"text/xml"};
+    return content_type;
 }

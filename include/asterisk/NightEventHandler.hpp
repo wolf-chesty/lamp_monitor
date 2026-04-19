@@ -1,31 +1,42 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef AST_BRIDGE_NIGHT_BUTTON_HPP
-#define AST_BRIDGE_NIGHT_BUTTON_HPP
+#ifndef AST_BRIDGE_NIGHT_EVENT_HANDLER_HPP
+#define AST_BRIDGE_NIGHT_EVENT_HANDLER_HPP
+
+#include "asterisk/EventHandler.hpp"
 
 #include "button_state/PhoneButton.hpp"
 #include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
 #include <memory>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
-namespace ast_bridge {
+namespace asterisk {
 
-/// @class NightButton
-/// @namespace ast_bridge
+/// @class NightEventHandler
+/// @namespace asterisk
 ///
 /// @brief Monitors the Asterisk server for night state change.
 ///
 /// This object acts as an Asterisk to application state bridge. This object will inspect Asterisk AMI event messages
 /// for state changes in the night device. Once a night device change is detected, this object will delegate the new
 /// state to the application state button for this event.
-class NightButton {
+class NightEventHandler : public EventHandler {
 public:
-    explicit NightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
-                         std::shared_ptr<cpp_ami::Connection> io_conn, std::string night_exten, std::string context,
-                         std::string device);
-    virtual ~NightButton();
+    explicit NightEventHandler(std::weak_ptr<button_state::PhoneButton> phone_button,
+                               std::shared_ptr<cpp_ami::Connection> io_conn, std::string night_exten,
+                               std::string context, std::string device);
+    ~NightEventHandler() override;
+
+    static std::shared_ptr<NightEventHandler> create(YAML::Node const &config,
+                                                     std::weak_ptr<button_state::PhoneButton> const &phone_button,
+                                                     std::shared_ptr<cpp_ami::Connection> const &conn);
+
+    EventType getType() const override;
+
+    std::string getDevice();
 
 private:
     /// @brief Function that processes Asterisk AMI events.
@@ -33,14 +44,13 @@ private:
     /// @param event Event that occurred on the Asterisk server.
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
-    std::shared_ptr<button_state::PhoneButton> phone_button_;   ///< Pointer to phone button state.
-    std::shared_ptr<cpp_ami::Connection> io_conn_;              ///< Pointer to Asterisk AMI object.
+    std::weak_ptr<button_state::PhoneButton> phone_button_;     ///< Pointer to phone button state.
     std::string night_exten_;                                   ///< Extension of the night button.
     std::string context_;                                       ///< Context that the night extension is a member of.
     std::string device_;                                        ///< Device name of the night button.
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Asterisk AMI callback ID.
 };
 
-} // namespace ast_bridge
+} // namespace asterisk
 
 #endif

@@ -22,9 +22,9 @@ include(third_party/c++ami.cmake)
 include(third_party/cpp-httplib.cmake)
 include(third_party/dbpool.cmake)
 include(third_party/fmt.cmake)
-include(third_party/inifile-cpp.cmake)
 include(third_party/pugixml.cmake)
 include(third_party/yaml-cpp.cmake)
+#include(third_party/yaml-schema-cpp.cmake)
 
 if (COVERAGE)
     set(CPPAMI_COVERAGE ON)
@@ -39,6 +39,19 @@ elseif (SANITIZE_THREAD)
     set(CPPAMI_SANITIZE_THREAD ON)
     set(DBPOOL_SANITIZE_THREAD ON)
 endif ()
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Resource files
+# ----------------------------------------------------------------------------------------------------------------------
+#find_program(XXD_EXE xxd REQUIRED)
+#
+#set(SCHEMA_FILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/res/config.schema)
+#set(SCHEMA_FILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/config_schema.h)
+#add_custom_command(OUTPUT ${SCHEMA_FILE_OUT}
+#    COMMAND ${XXD_EXE} -n config_schema -i ${SCHEMA_FILE_IN}  ${SCHEMA_FILE_OUT}
+#    DEPENDS ${SCHEMA_FILE_IN}
+#    COMMENT "Transforming ${SCHEMA_FILE_IN} to ${SCHEMA_FILE_OUT}"
+#)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Project definition
@@ -59,22 +72,26 @@ target_link_libraries(lamp_monitor
     c++ami
     dbpool
     httplib
-    inicpp::inicpp
     pugixml
     yaml-cpp::yaml-cpp
 )
 
 target_sources(lamp_monitor
     PRIVATE
-    src/ast_bridge/Deskphone.cpp
-    src/ast_bridge/NightButton.cpp
-    src/ast_bridge/ParkButton.cpp
-    src/button_state/LampField.cpp
+    src/asterisk/EventHandler.cpp
+    src/asterisk/RegisterEventHandler.cpp
+    src/asterisk/NightEventHandler.cpp
+    src/asterisk/ParkEventHandler.cpp
+    src/button_state/ButtonPlan.cpp
     src/button_state/PhoneButton.cpp
     src/cache/DeskphoneCache.cpp
-    src/phonebook/PhonebookStringCreator.cpp
+    src/phonebook/Adapter.cpp
+    src/phonebook/HTTPPhonebook.cpp
     src/phonebook/adapter/PjsipWizardAdapter.cpp
-    src/ui/PhoneBridge.cpp
+    src/ui/PhoneEventDispatcher.cpp
+    src/ConfigFileParser.cpp
+    src/ui/HttpNightButton.cpp
+    src/ui/HttpParkButton.cpp
     src/ui/PhoneUi.cpp
     src/ui/PhoneUiState.cpp
     src/xml/yealink/CallParkMenu.cpp

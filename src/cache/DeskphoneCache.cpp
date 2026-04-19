@@ -37,6 +37,13 @@ DeskphoneCache::~DeskphoneCache()
     assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
 }
 
+std::shared_ptr<DeskphoneCache> DeskphoneCache::create(YAML::Node const &config)
+{
+    auto const filename = config["filename"].as<std::string>();
+    std::chrono::minutes const expiry{std::max<uint32_t>(60, config["expiry"].as<uint32_t>())};
+    return std::make_shared<DeskphoneCache>(filename, expiry);
+}
+
 /// Initializes an SQLite3 database with tables used to maintain the active deskphone details. If the table of active
 /// deskphones already exists all deskphones in the database set to an expired state so that deskphone re-registration
 /// can immediately occur.

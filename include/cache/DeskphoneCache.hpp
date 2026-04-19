@@ -11,6 +11,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 /// @class DeskphoneCache
 ///
@@ -35,6 +36,8 @@ protected:
 public:
     explicit DeskphoneCache(std::string_view filename, std::chrono::milliseconds expiry);
     ~DeskphoneCache();
+
+    static std::shared_ptr<DeskphoneCache> create(YAML::Node const &config);
 
     /// @brief Adds deskphone details to the cache.
     ///
