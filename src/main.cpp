@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     // Make sure that the config file exists
     if (!std::filesystem::exists(args.config_file)) {
-        syslog(LOG_ERR, "Unable to find config file %s", args.config_file.c_str());
+        std::cerr << "Unable to find config file " << args.config_file << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -62,10 +62,12 @@ int main(int argc, char *argv[])
         // Fork to background if requested
         if (args.is_daemon) {
             if (daemon(0, 0) == -1) {
-                syslog(LOG_CRIT, "Unable to daemonize");
+                std::cerr << "Unable to daemonize" << std::endl;
                 exit(EXIT_FAILURE);
             }
         }
+
+        setUserGroup(args.user, args.group);
 
         configureSyslog(config_yaml["syslog"], "lamp_monitor", args.is_daemon);
 
@@ -134,6 +136,8 @@ ApplicationParameters getApplicationParameters(int argc, char *argv[])
 {
     argparse::ArgumentParser parser("lamp_monitor");
     parser.add_argument("-d", "--daemon").default_value(false).implicit_value(true).nargs(0);
+    parser.add_argument("-u", "--user");
+    parser.add_argument("-g", "--group").default_value("");
     parser.add_argument("config_ini").help("Application config file").required();
 
     try {
@@ -144,7 +148,8 @@ ApplicationParameters getApplicationParameters(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    return ApplicationParameters{parser.get<std::string>("config_ini"), parser.get<bool>("--daemon")};
+    return ApplicationParameters{parser.get<std::string>("config_ini"), parser.get<std::string>("--user"),
+                                 parser.get<std::string>("--group"), parser.get<bool>("--daemon")};
 }
 
 /// @brief Create a thread that will ping the AMI server.

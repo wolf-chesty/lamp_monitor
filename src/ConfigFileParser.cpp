@@ -14,11 +14,47 @@
 #include "ui/PhoneEventDispatcher.hpp"
 #include "ui/PhoneUi.hpp"
 #include <c++ami/action/Login.hpp>
+#include <errno.h>
+#include <grp.h>
+#include <pwd.h>
+#include <sys/types.h>
 #include <syslog.h>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <yaml-cpp/yaml.h>
+
+void setUserGroup(std::string const &user, std::string const &group)
+{
+    auto const uid_info = getpwnam(user.c_str());
+    if (!uid_info) {
+        std::cerr << "petpwnam error: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (initgroups(user.c_str(), uid_info->pw_gid) == -1) {
+        std::cerr << "initgroups error: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    auto set_group_id = [&group, &uid_info]() -> int {
+        if (group.empty()) {
+            return setresgid(uid_info->pw_gid, uid_info->pw_gid, uid_info->pw_gid);
+        }
+        auto const gid_info = getgrnam(group.c_str());
+        return setresgid(gid_info->gr_gid, gid_info->gr_gid, gid_info->gr_gid);
+    };
+
+    if (set_group_id() == -1) {
+        std::cerr << "setresgid error: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (setuid(uid_info->pw_uid) == -1) {
+        std::cerr << "setgid error: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
 
 void configureSyslog(YAML::Node const &config, std::string_view app_name, bool const is_daemon)
 {

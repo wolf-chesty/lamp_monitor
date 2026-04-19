@@ -10,6 +10,8 @@
 #include <string_view>
 #include <yaml-cpp/yaml.h>
 
+void setUserGroup(std::string const &user, std::string const &group);
+
 void configureSyslog(YAML::Node const &config, std::string_view app_name, bool const is_daemon);
 
 std::shared_ptr<cpp_ami::Connection> createAMIConnection(YAML::Node const &config, std::string_view filter = "on");

@@ -11,6 +11,8 @@
 /// @brief Object contains the parameters for the application.
 struct ApplicationParameters {
     std::string config_file; ///< Name of the configuration file.
+    std::string user;        ///< User to run as.
+    std::string group;       ///< Group to run as.
     bool is_daemon{};        ///< Flag indicating if the application should run as a daemon.
 };
 
