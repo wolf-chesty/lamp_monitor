@@ -8,8 +8,8 @@
 
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
+#include "ui/PhoneEventDispatcher.hpp"
 #include "ui/PhoneUi.hpp"
-#include <c++ami/Connection.hpp>
 #include <c++ami/util/KeyValDict.hpp>
 #include <memory>
 #include <string>

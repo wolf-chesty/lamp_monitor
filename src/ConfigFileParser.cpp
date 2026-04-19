@@ -261,15 +261,12 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
 
 std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
     createPhonePlans(YAML::Node const &config, httplib::Server &http_server,
-                     std::shared_ptr<DeskphoneCache> const &phone_cache,
-                     std::shared_ptr<cpp_ami::Connection> const &conn)
+                     std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge,
+                     std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
-    // Create software to deskphone bridge
-    auto const ami_bridge = std::make_shared<ui::PhoneEventDispatcher>(conn, phone_cache);
-
     // Lambda to create button plan
     auto create_button_plan = [&ami_bridge, &config,
-                               &conn](std::string const &name) mutable -> std::shared_ptr<button_state::ButtonPlan> {
+                               &io_conn](std::string const &name) mutable -> std::shared_ptr<button_state::ButtonPlan> {
         std::shared_ptr<button_state::ButtonPlan> button_plan;
         for (auto const &plan_cfg : config["button_plans"]) {
             // Filter on plan name
@@ -279,7 +276,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
             // Create new button plan
             button_plan = button_state::ButtonPlan::create(plan_cfg, ami_bridge);
             // Add Asterisk event handlers to button plan
-            for (auto const &[id, handler] : createEventHandlers(button_plan, plan_cfg, conn)) {
+            for (auto const &[id, handler] : createEventHandlers(button_plan, plan_cfg, io_conn)) {
                 button_plan->addEventHandler(id, handler);
             }
             break;
@@ -315,7 +312,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
         // Configure HTTP buttons for the phone
         auto const phone_type = phone_cfg["type"].as<std::string>();
         for (auto const &uri_cfg : phone_cfg["paths"]) {
-            configureHTTPButton(phone_type, uri_cfg, http_server, http_url, conn, button_plan, ui);
+            configureHTTPButton(phone_type, uri_cfg, http_server, http_url, io_conn, button_plan, ui);
         }
     }
     return button_plans;
@@ -326,7 +323,8 @@ std::shared_ptr<asterisk::RegisterEventHandler>
                                std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     auto const phone_cache = createDeskphoneCache(config["database"], http_server);
-    auto const phone_plans = createPhonePlans(config, http_server, phone_cache, conn);
+    auto const ami_bridge = std::make_shared<ui::PhoneEventDispatcher>(conn, phone_cache);
+    auto const phone_plans = createPhonePlans(config, http_server, ami_bridge, conn);
 
     auto event_handler = std::make_shared<asterisk::RegisterEventHandler>(phone_cache, conn);
     for (auto const &[name, plan] : phone_plans) {

@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        setUserGroup(args.user, args.group);
+        //setUserGroup(args.user, args.group);
 
         configureSyslog(config_yaml["syslog"], "lamp_monitor", args.is_daemon);
 
@@ -136,7 +136,7 @@ ApplicationParameters getApplicationParameters(int argc, char *argv[])
 {
     argparse::ArgumentParser parser("lamp_monitor");
     parser.add_argument("-d", "--daemon").default_value(false).implicit_value(true).nargs(0);
-    parser.add_argument("-u", "--user");
+    parser.add_argument("-u", "--user").default_value("");
     parser.add_argument("-g", "--group").default_value("");
     parser.add_argument("config_ini").help("Application config file").required();
 

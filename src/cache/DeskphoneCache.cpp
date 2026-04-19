@@ -34,7 +34,7 @@ DeskphoneCache::~DeskphoneCache()
 
     // Truncate the database file
     ret = connection.exec("PRAGMA wall_checkpoint(TRUNCATE);");
-    assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
+    assert(ret == dbpool::PreparedStmt::ReturnCode::OK);
 }
 
 std::shared_ptr<DeskphoneCache> DeskphoneCache::create(YAML::Node const &config)

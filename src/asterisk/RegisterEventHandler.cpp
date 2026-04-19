@@ -51,9 +51,7 @@ std::shared_ptr<ui::PhoneUI> RegisterEventHandler::getPhoneUI(std::string const 
     if (!plan) {
         return nullptr;
     }
-
-    auto const ui = plan->getPhoneUI(ui_name);
-    return ui;
+    return plan->getPhoneUI(ui_name);
 }
 
 /// This callback is invoked for every AMI event that is published by the Asterisk server. This callback will process
@@ -102,6 +100,5 @@ void RegisterEventHandler::publishPhoneState(std::string const &aor, std::shared
     phone_ui->initialize(action);
 
     auto const io_conn = getConnection();
-    assert(io_conn);
     io_conn->asyncInvoke(action);
 }
