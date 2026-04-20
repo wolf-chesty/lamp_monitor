@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        //setUserGroup(args.user, args.group);
+        setUserGroup(args.user, args.group);
 
         configureSyslog(config_yaml["syslog"], "lamp_monitor", args.is_daemon);
 

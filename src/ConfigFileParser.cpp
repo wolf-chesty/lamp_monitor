@@ -26,32 +26,37 @@
 
 void setUserGroup(std::string const &user, std::string const &group)
 {
-    auto const uid_info = getpwnam(user.c_str());
-    if (!uid_info) {
-        std::cerr << "petpwnam error: " << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    passwd *uid_info = nullptr;
 
-    if (initgroups(user.c_str(), uid_info->pw_gid) == -1) {
-        std::cerr << "initgroups error: " << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    auto set_group_id = [&group, &uid_info]() -> int {
-        if (group.empty()) {
-            return setresgid(uid_info->pw_gid, uid_info->pw_gid, uid_info->pw_gid);
+    // Initialize groups for the user
+    if (!user.empty()) {
+        uid_info = getpwnam(user.c_str());
+        if (!uid_info) {
+            std::cerr << "petpwnam error: " << strerror(errno) << std::endl;
+            exit(EXIT_FAILURE);
         }
-        auto const gid_info = getgrnam(group.c_str());
-        return setresgid(gid_info->gr_gid, gid_info->gr_gid, gid_info->gr_gid);
-    };
+        if (initgroups(user.c_str(), uid_info->pw_gid) == -1) {
+            std::cerr << "initgroups error: " << strerror(errno) << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
 
-    if (set_group_id() == -1) {
+    // Set the active group for the application
+    if (!group.empty()) {
+        auto const gid_info = getgrnam(group.c_str());
+        if (setresgid(gid_info->gr_gid, gid_info->gr_gid, gid_info->gr_gid) == -1) {
+            std::cerr << "setresgid error: " << strerror(errno) << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (uid_info != nullptr && setresgid(uid_info->pw_gid, uid_info->pw_gid, uid_info->pw_gid) == -1) {
         std::cerr << "setresgid error: " << strerror(errno) << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    if (setuid(uid_info->pw_uid) == -1) {
-        std::cerr << "setgid error: " << strerror(errno) << std::endl;
+    // Set the active user for the application
+    if (uid_info != nullptr && setresuid(uid_info->pw_uid, uid_info->pw_uid, uid_info->pw_gid) == -1) {
+        std::cerr << "setresuid error: " << strerror(errno) << std::endl;
         exit(EXIT_FAILURE);
     }
 }
