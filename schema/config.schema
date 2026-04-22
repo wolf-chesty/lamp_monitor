@@ -1,0 +1,83 @@
+syslog:
+  level:
+    _mandatory: false
+    _type: unsigned int
+    _options: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+    _default: 3
+    _doc: "syslog logging level"
+  console:
+    _mandatory: false
+    _type: bool
+    _default: false
+    _doc: "log to the console"
+
+http:
+  addr:
+    _mandatory: false
+    _type: string
+    _default: "0.0.0.0"
+    _doc: "IP address to listen on"
+  port:
+    _mandatory: false
+    _type: unsigned int
+    _default: 80
+    _doc: "port to listen on"
+  url:
+    _mandatory: true
+    _type: string
+    _doc: "URL to use when constructing application URLs"
+
+ami:
+  host:
+    _mandatory: false
+    _type: string
+    _default: "127.0.0.1"
+    _doc: "hostname of Asterisk AMI server"
+  port:
+    _mandatory: false
+    _type: unsigned int
+    _default: 5038
+    _doc: "port of Asterisk AMI server"
+  username:
+    _mandatory: true
+    _type: string
+    _doc: "username to log into Asterisk AMI server"
+  secret:
+    _mandatory: true
+    _type: string
+    _doc: "password to log into Asterisk AMI server"
+
+database:
+  filename:
+    _mandatory: true
+    _type: string
+    _doc: "path to active deskphone cache"
+  expiry:
+    _mandatory: false
+    _type: unsigned int
+    _default: 120
+    _doc: "expiry of records in active deskphone cache in minutes"
+  expire_uri:
+    _mandatory: true
+    _type: std::string
+    _doc: "HTTP path to manually expire active deskphones from the cache"
+
+phonebooks:
+  adapters:
+    _mandatory: true
+    _type: PhonebookAdapter[]
+    _doc: "phonebook source adapter"
+  http_paths:
+    _mandatory: true
+    _type: PhonebookHTTPPaths[]
+    _doc: "phonebook HTTP paths"
+
+button_plans:
+  _mandatory: true
+  _type: ButtonPlan[]
+  _doc: "button plan"
+
+phones:
+  _mandatory: true
+  _type: PhoneConfig[]
+  _doc: "phone config"

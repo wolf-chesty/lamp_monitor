@@ -1,0 +1,12 @@
+exten:
+  _mandatory: true
+  _type: string
+  _doc: "night button park extension"
+context:
+  _mandatory: true
+  _type: string
+  _doc: "night button device context"
+device:
+  _mandatory: true
+  _type: string
+  _doc: "night button device name"

@@ -1,0 +1,12 @@
+button_id:
+  _mandatory: true
+  _type: unsigned int
+  _doc: "button plan button ID"
+park_list_path:
+  _mandatory: true
+  _type: string
+  _doc: "HTTP park list URI path"
+park_info_path:
+  _mandatory: true
+  _type: string
+  _doc: "HTTP park info URI path"

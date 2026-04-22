@@ -17,12 +17,22 @@
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
-#include <sys/types.h>
 #include <syslog.h>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <yaml-cpp/yaml.h>
+#include <yaml-schema-cpp/yaml_server.hpp>
+
+YAML::Node loadConfigFile(std::string const &config_file)
+{
+    yaml_schema_cpp::YamlServer server({"/home/cwalker/repos/lamp_monitor/schema"}, config_file);
+    if (!server.applySchema("config.schema")) {
+        std::cerr << server.getLog() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return server.getNode();
+}
 
 void setUserGroup(std::string const &user, std::string const &group)
 {
@@ -125,7 +135,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
         return nullptr;
     };
 
-    for (auto const &phonebook_config : config["paths"]) {
+    for (auto const &phonebook_config : config["http_paths"]) {
         // Create phonebook source adapter
         auto const &adapter_id = phonebook_config["adapter"].as<std::string>();
         auto const adapter = create_adapter(adapter_id);
@@ -152,6 +162,12 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
     }
 }
 
+/// @brief Creates active deskphone cache.
+///
+/// @param config Configuration for active deskphone cache.
+/// @param http_server HTTP server to configure.
+///
+/// @return Pointer to created deskphone cache.
 std::shared_ptr<DeskphoneCache> createDeskphoneCache(YAML::Node const &config, httplib::Server &http_server)
 {
     // Create cache of deskphones
@@ -171,19 +187,26 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(YAML::Node const &config, h
     return phone_cache;
 }
 
+/// @brief Creates Asterisk AMI event handlers.
+///
+/// @param button_plan Button plan that the Asterisk AMI event handlers will be added to.
+/// @param config Button plan configuration.
+/// @param conn Pointer to Asterisk AMI connection.
+///
+/// @return Collection of button ID, button plan pointers.
 std::vector<std::pair<uint16_t, std::shared_ptr<asterisk::EventHandler>>>
-    createEventHandlers(std::shared_ptr<button_state::ButtonPlan> const &button_plan, YAML::Node const &plan_cfg,
+    createEventHandlers(std::shared_ptr<button_state::ButtonPlan> const &button_plan, YAML::Node const &config,
                         std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     std::vector<std::pair<uint16_t, std::shared_ptr<asterisk::EventHandler>>> ast_buttons;
-    for (auto const &button_cfg : plan_cfg["buttons"]) {
+    for (auto const &button_cfg : config["buttons"]) {
         auto const button_id = button_cfg["id"].as<uint16_t>();
         auto const &type = button_cfg["type"].as<std::string>();
-        if (type == "night") {
+        if (type == "night_button") {
             auto const button = button_plan->getButton(button_id);
             ast_buttons.emplace_back(button_id, asterisk::NightEventHandler::create(button_cfg, button, conn));
         }
-        else if (type == "park") {
+        else if (type == "park_button") {
             auto const button = button_plan->getButton(button_id);
             ast_buttons.emplace_back(button_id, asterisk::ParkEventHandler::create(button_cfg, button, conn));
         }
@@ -196,6 +219,15 @@ std::vector<std::pair<uint16_t, std::shared_ptr<asterisk::EventHandler>>>
     return ast_buttons;
 }
 
+/// @brief Creates HTTP button wrappers on application buttons.
+///
+/// @param phone_type Phone type string.
+/// @param config Configuration parameters.
+/// @param http_server HTTP server.
+/// @param http_url HTTP URL of HTTP server.
+/// @param conn Pointer to Asterisk AMI connection.
+/// @param button_plan Application button plan.
+/// @param ui Pointer to deskphone interfece renderer.
 void configureHTTPButton(std::string const &phone_type, YAML::Node const &config, httplib::Server &http_server,
                          std::string const &http_url, std::shared_ptr<cpp_ami::Connection> const &conn,
                          std::shared_ptr<button_state::ButtonPlan> const &button_plan,
@@ -203,20 +235,21 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
 {
     auto const type = config["type"].as<std::string>();
 
-    if (type == "state") {
-        auto const uri = config["uri"].as<std::string>();
+    if (type == "http_state") {
+        auto const uri = config["path"].as<std::string>();
         auto const http_button = std::dynamic_pointer_cast<ui::HTTPStateButton>(ui);
         if (!http_button) {
             syslog(LOG_WARNING, "Unable to configure phone state URI %s", uri.c_str());
             return;
         }
-        http_server.Get(uri, [http_button](httplib::Request const &req, httplib::Response &res) -> void {
-            res.set_content(http_button->httpPushButton(), http_button->getContentType());
-        });
+        http_server.Get(uri,
+                        [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                            res.set_content(http_button->httpPushButton(), http_button->getContentType());
+                        });
     }
-    else if (type == "night") {
+    else if (type == "http_night") {
         auto const button_id = config["button_id"].as<uint16_t>();
-        auto const uri = config["uri"].as<std::string>();
+        auto const uri = config["path"].as<std::string>();
         auto const ast_button = button_plan->getEventHandler(button_id);
         if (ast_button->getType() != asterisk::EventHandler::EventType::Night) {
             syslog(LOG_WARNING, "Unable to configure night button URI %s", uri.c_str());
@@ -227,14 +260,15 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
         auto const http_button = ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn,
                                                              ast_night_button->getDevice());
         assert(http_button);
-        http_server.Get(uri, [http_button](httplib::Request const &req, httplib::Response &res) -> void {
-            res.set_content(http_button->httpPushButton(), http_button->getContentType());
-        });
+        http_server.Get(uri,
+                        [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                            res.set_content(http_button->httpPushButton(), http_button->getContentType());
+                        });
     }
-    else if (type == "park") {
+    else if (type == "http_park") {
         auto const button_id = config["button_id"].as<uint16_t>();
-        auto const park_list_uri = config["park_list_uri"].as<std::string>();
-        auto const park_info_uri = config["park_info_uri"].as<std::string>();
+        auto const park_list_uri = config["park_list_path"].as<std::string>();
+        auto const park_info_uri = config["park_info_path"].as<std::string>();
         auto const ast_button = button_plan->getEventHandler(button_id);
         if (ast_button->getType() != asterisk::EventHandler::EventType::Park) {
             syslog(LOG_WARNING, "Unable to configure park button URI %s", park_list_uri.c_str());
@@ -264,6 +298,14 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
     }
 }
 
+/// @brief Creates application phone plan.
+///
+/// @param config Configuration for phone plan.
+/// @param http_server HTTP server to configure.
+/// @param ami_bridge Pointer to object that updates deskphones.
+/// @param io_conn Pointer to Asterisk AMI connection.
+///
+/// @return Button plan name, button plan pair.
 std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
     createPhonePlans(YAML::Node const &config, httplib::Server &http_server,
                      std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge,
@@ -316,7 +358,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
 
         // Configure HTTP buttons for the phone
         auto const phone_type = phone_cfg["type"].as<std::string>();
-        for (auto const &uri_cfg : phone_cfg["paths"]) {
+        for (auto const &uri_cfg : phone_cfg["http_paths"]) {
             configureHTTPButton(phone_type, uri_cfg, http_server, http_url, io_conn, button_plan, ui);
         }
     }

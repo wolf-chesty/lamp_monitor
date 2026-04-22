@@ -1,0 +1,9 @@
+name:
+  _mandatory: true
+  _type: string
+  _doc: "button plan name"
+buttons:
+  _mandatory: true
+  _type: derived[]
+  _base: ButtonPlanButton
+  _doc: "plan button"

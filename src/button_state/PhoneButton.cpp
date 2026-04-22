@@ -12,12 +12,12 @@ PhoneButton::PhoneButton(std::weak_ptr<ButtonPlan> button_plan, uint16_t const b
                          FlashMode const flash_mode, bool const critical_when_on, bool const critical_when_off,
                          bool const button_on)
     : button_plan_(std::move(button_plan))
+    , button_id_(button_id)
     , color_(color)
     , flash_mode_(flash_mode)
-    , button_id_(button_id)
-    , button_on_(button_on)
     , critical_when_on_(critical_when_on)
     , critical_when_off_(critical_when_off)
+    , button_on_(button_on)
 {
 }
 
@@ -54,8 +54,8 @@ PhoneButton::Color PhoneButton::toColor(std::string_view color_type)
 
 PhoneButton::FlashMode PhoneButton::toFlashMode(std::string_view flash_mode)
 {
-    if (flash_mode == "solid") {
-        return FlashMode::Solid;
+    if (flash_mode == "off") {
+        return FlashMode::Off;
     }
     else if (flash_mode == "slow") {
         return FlashMode::Slow;
@@ -66,7 +66,7 @@ PhoneButton::FlashMode PhoneButton::toFlashMode(std::string_view flash_mode)
 
     assert(false);
     syslog(LOG_WARNING, "Unknown flash mode: %s", flash_mode.data());
-    return FlashMode::Solid;
+    return FlashMode::Off;
 }
 
 uint16_t PhoneButton::getButtonID() const

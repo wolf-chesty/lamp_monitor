@@ -1,0 +1,74 @@
+syslog:
+  level: 7
+  #level: 3
+  console: true
+
+http:
+  addr: '0.0.0.0'
+  port: 8080
+  url: http://127.0.0.1:8080
+
+ami:
+  host: 127.0.0.1
+  port: 5038
+  username: username
+  secret: secret
+
+database:
+  filename: /tmp/phone_cache.sqlite3
+  expiry: 120
+  expire_uri: /expire
+
+phonebooks:
+  adapters:
+    - type: wizard
+      name: default
+      filter: local-phone
+
+  http_paths:
+    - path: /phonebook
+      adapter: default
+      type: yealink
+      expiry: 60
+
+button_plans:
+  - name: default
+    buttons:
+      - id: 1
+        label: Night
+        color: red
+        critical_on: false
+        critical_off: false
+        flash: solid
+        type: night_button
+        exten: 900
+        context: local-set
+        device: Custom:night
+
+      - id: 2
+        label: Park
+        color: red
+        critical_on: true
+        critical_off: false
+        flash: fast
+        type: park_button
+        parking_lot: default
+      
+phones:
+  - name: yealink_t88w
+    type: yealink
+    button_plan: default
+
+    http_paths:
+      - type: http_state
+        path: /blf_state
+
+      - type: http_night
+        button_id: 1
+        path: /reset_night
+
+      - type: http_park
+        button_id: 2
+        park_list_path: /parked_call_list
+        park_info_path: /parked_call_info
+

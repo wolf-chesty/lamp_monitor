@@ -1,0 +1,4 @@
+parking_lot:
+  _mandatory: true
+  _type: string
+  _doc: "Asterisk parking lot name"

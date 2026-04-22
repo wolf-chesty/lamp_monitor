@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
 
     try {
         // Load config file
-        auto const config_yaml = YAML::LoadFile(args.config_file);
+        auto const config_yaml = loadConfigFile(args.config_file);
+        //auto const config_yaml = YAML::LoadFile(args.config_file);
 
         // Fork to background if requested
         if (args.is_daemon) {
@@ -135,9 +136,13 @@ int main(int argc, char *argv[])
 ApplicationParameters getApplicationParameters(int argc, char *argv[])
 {
     argparse::ArgumentParser parser("lamp_monitor");
-    parser.add_argument("-d", "--daemon").default_value(false).implicit_value(true).nargs(0);
-    parser.add_argument("-u", "--user").default_value("");
-    parser.add_argument("-g", "--group").default_value("");
+    parser.add_argument("-d", "--daemon")
+        .help("run application as a daemon")
+        .default_value(false)
+        .implicit_value(true)
+        .nargs(0);
+    parser.add_argument("-u", "--user").help("run as user").default_value("");
+    parser.add_argument("-g", "--group").help("run as group").default_value("");
     parser.add_argument("config_ini").help("Application config file").required();
 
     try {

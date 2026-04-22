@@ -1,0 +1,5 @@
+type:
+  _mandatory: true
+  _type: string
+  _options: [ "http_night", "http_park", "http_state" ]
+  _doc: "phone HTTP button type"

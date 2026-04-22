@@ -1,0 +1,36 @@
+id:
+  _mandatory: true
+  _type: unsigned int
+  _doc: "button ID"
+label:
+  _mandatory: false
+  _type: string
+  _default: ""
+  _doc: "button label"
+color:
+  _mandatory: false
+  _type: string
+  _default: "red"
+  _options: [ "red", "green", "blue" ]
+  _doc: "button color"
+critical_on:
+  _mandatory: false
+  _type: bool
+  _default: false
+  _doc: "button critical when on"
+critical_off:
+  _mandatory: false
+  _type: bool
+  _default: false
+  _doc: "button critical when off"
+flash:
+  _mandatory: false
+  _type: string
+  _default: "off"
+  _options: [ "off", "slow", "fast" ]
+  _doc: "button flash style when on"
+type:
+  _mandatory: true
+  _type: string
+  _options: [ "night_button", "park_button" ]
+  _doc: "button type"

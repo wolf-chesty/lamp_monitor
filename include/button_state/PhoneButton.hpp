@@ -29,7 +29,7 @@ public:
     /// @enum FlashMode
     ///
     /// @brief Represents the flash mode of an active button.
-    enum class FlashMode { Solid, Slow, Fast };
+    enum class FlashMode { Off, Slow, Fast };
 
 public:
     explicit PhoneButton(std::weak_ptr<ButtonPlan> button_plan, uint16_t const button_id, Color const color,
@@ -107,7 +107,7 @@ private:
     uint16_t button_id_{};                   ///< Button ID in lamp field.
     std::string label_;                      ///< Button label.
     Color color_{Color::Red};                ///< Button color for deskphones that support color displays.
-    FlashMode flash_mode_{FlashMode::Solid}; ///< Flash mode for on button.
+    FlashMode flash_mode_{FlashMode::Off}; ///< Flash mode for on button.
     bool critical_when_on_{false};           ///< Flag indicating message is critical when button is on.
     bool critical_when_off_{false};          ///< Flag indicating message is critical when button is off.
     std::atomic<bool> button_on_{false};     ///< Current button state.

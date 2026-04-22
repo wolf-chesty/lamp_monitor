@@ -70,7 +70,7 @@ char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button
     char const *button_state = BUTTON_STATE_OFF;
     if (button.isOn()) {
         switch (button.getFlashMode()) {
-        case button_state::PhoneButton::FlashMode::Solid:
+        case button_state::PhoneButton::FlashMode::Off:
             button_state = BUTTON_STATE_ON;
             break;
         case button_state::PhoneButton::FlashMode::Fast:

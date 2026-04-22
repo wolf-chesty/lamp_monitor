@@ -17,14 +17,17 @@ option(UNIT_TESTS "Build unit tests" ON)
 # ----------------------------------------------------------------------------------------------------------------------
 # Project dependencies
 # ----------------------------------------------------------------------------------------------------------------------
+find_package(fmt 12.1.0 REQUIRED)
+find_package(pugixml 1.15 REQUIRED)
+find_package(yaml-cpp 0.7 REQUIRED)
+
+include(CMakeFindDependencyMacro)
+find_package(yaml-schema-cpp 0.0.0 REQUIRED)
+
 include(third_party/argparse.cmake)
 include(third_party/c++ami.cmake)
 include(third_party/cpp-httplib.cmake)
 include(third_party/dbpool.cmake)
-include(third_party/fmt.cmake)
-include(third_party/pugixml.cmake)
-include(third_party/yaml-cpp.cmake)
-#include(third_party/yaml-schema-cpp.cmake)
 
 if (COVERAGE)
     set(CPPAMI_COVERAGE ON)
@@ -48,7 +51,7 @@ endif ()
 #set(SCHEMA_FILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/res/config.schema)
 #set(SCHEMA_FILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/config_schema.h)
 #add_custom_command(OUTPUT ${SCHEMA_FILE_OUT}
-#    COMMAND ${XXD_EXE} -n config_schema -i ${SCHEMA_FILE_IN}  ${SCHEMA_FILE_OUT}
+#    COMMAND ${XXD_EXE} -n config_schema -i ${SCHEMA_FILE_IN} ${SCHEMA_FILE_OUT}
 #    DEPENDS ${SCHEMA_FILE_IN}
 #    COMMENT "Transforming ${SCHEMA_FILE_IN} to ${SCHEMA_FILE_OUT}"
 #)
@@ -59,6 +62,8 @@ endif ()
 add_executable(lamp_monitor "")
 
 set(CMAKE_CXX_STANDARD 20)
+
+target_compile_options (lamp_monitor PRIVATE -fPIC -Wall -Wextra -Wshadow -pedantic -pedantic-errors)
 
 target_include_directories(lamp_monitor
     PUBLIC
@@ -74,6 +79,7 @@ target_link_libraries(lamp_monitor
     httplib
     pugixml
     yaml-cpp::yaml-cpp
+    yaml-schema-cpp
 )
 
 target_sources(lamp_monitor
