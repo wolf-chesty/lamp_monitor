@@ -1,4 +1,4 @@
 path:
   _mandatory: true
   _type: string
-  _doc: "phone HTTP state path"
+  _doc: phone HTTP state path

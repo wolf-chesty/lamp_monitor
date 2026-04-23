@@ -1,19 +1,19 @@
 path:
   _mandatory: true
   _type: string
-  _doc: "phonebook HTTP path"
+  _doc: phonebook HTTP path
 adapter:
   _mandatory: true
   _type: string
-  _doc: "name of phonebook adapter"
+  _doc: name of phonebook adapter
 type:
   _mandatory: false
   _type: string
   _default: "yealink"
   _options: [ "yealink" ]
-  _doc: "deskphone renderer"
+  _doc: deskphone renderer
 expiry:
   _mandatory: false
   _type: unsigned int
   _default: 60
-  _doc: "phonebook refresh period"
+  _doc: phonebook refresh period in minutes

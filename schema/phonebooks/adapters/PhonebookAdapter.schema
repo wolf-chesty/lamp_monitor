@@ -2,12 +2,12 @@ type:
   _mandatory: true
   _type: string
   _options: [ "wizard" ]
-  _doc: "phonebook adapter type"
+  _doc: phonebook adapter type
 name:
   _mandatory: true
   _type: string
-  _doc: "phonebook adapter name"
+  _doc: phonebook adapter name
 filter:
   _mandatory: $type == 'wizard'
   _type: string
-  _doc: "filter for wizard type phone"
+  _doc: filter for wizard type phone

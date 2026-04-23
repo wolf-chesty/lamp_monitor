@@ -174,15 +174,30 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(YAML::Node const &config, h
     auto const phone_cache = DeskphoneCache::create(config);
 
     // Attach manual expiry HTTP URI to deskphone cache
-    auto const &expire_uri = config["expire_uri"].as<std::string>();
-    http_server.Get(expire_uri, [phone_cache](httplib::Request const &req, httplib::Response &res) -> void {
-        if (!req.has_param("aor") || !req.has_param("ip")) {
-            res.status = 400;
-            return;
-        }
-        phone_cache->deleteEndpoint(req.get_param_value("aor"), req.get_param_value("ip"));
-        res.status = 204;
-    });
+    auto const &http_config = config["http_paths"];
+
+    // Setup database expire HTTP endpoint
+    if (auto const &expire_path = http_config["expire_path"].as<std::string>(); !expire_path.empty()) {
+        http_server.Get(expire_path, [phone_cache](httplib::Request const &req, httplib::Response &res) -> void {
+            if (!req.has_param("aor") || !req.has_param("ip")) {
+                res.status = 400;
+                return;
+            }
+            phone_cache->deleteEndpoint(req.get_param_value("aor"), req.get_param_value("ip"));
+            res.status = 204;
+        });
+    }
+
+    // Setup database registration HTTP endpoint
+    if (auto const &register_path = http_config["register_path"].as<std::string>(); !register_path.empty()) {
+        http_server.Get(register_path, [phone_cache](httplib::Request const &req, httplib::Response &res) -> void {
+            if (!req.has_param("aor") || !req.has_param("button_plan") || !req.has_param("phone_cfg")) {
+                res.status = 400;
+                return;
+            }
+            res.status = 204;
+        });
+    }
 
     return phone_cache;
 }
@@ -219,6 +234,96 @@ std::vector<std::pair<uint16_t, std::shared_ptr<asterisk::EventHandler>>>
     return ast_buttons;
 }
 
+/// @brief Configures the HTTP state button.
+///
+/// @param config Configuration parameters.
+/// @param http_server HTTP server.
+/// @param ui Pointer to deskphone interfece renderer.
+void configureHTTPStateButton(YAML::Node const &config, httplib::Server &http_server,
+                              std::shared_ptr<ui::PhoneUI> const &ui)
+{
+    auto const uri = config["path"].as<std::string>();
+    auto const http_button = std::dynamic_pointer_cast<ui::HTTPStateButton>(ui);
+    if (!http_button) {
+        syslog(LOG_WARNING, "Unable to configure phone state URI %s", uri.c_str());
+        return;
+    }
+    http_server.Get(uri, [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+    });
+}
+
+/// @brief Configures the HTTP night button.
+///
+/// @param phone_type Phone type string.
+/// @param config Configuration parameters.
+/// @param http_server HTTP server.
+/// @param conn Pointer to Asterisk AMI connection.
+/// @param button_plan Application button plan.
+void configureHTTPNightButton(std::string const &phone_type, YAML::Node const &config, httplib::Server &http_server,
+                              std::shared_ptr<cpp_ami::Connection> const &conn,
+                              std::shared_ptr<button_state::ButtonPlan> const &button_plan)
+{
+    auto const button_id = config["button_id"].as<uint16_t>();
+    auto const uri = config["path"].as<std::string>();
+    auto const ast_button = button_plan->getEventHandler(button_id);
+    if (ast_button->getType() != asterisk::EventHandler::EventType::Night) {
+        syslog(LOG_WARNING, "Unable to configure night button URI %s", uri.c_str());
+        return;
+    }
+
+    auto const ast_night_button = std::dynamic_pointer_cast<asterisk::NightEventHandler>(ast_button);
+    auto const http_button =
+        ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn, ast_night_button->getDevice());
+    assert(http_button);
+    http_server.Get(uri, [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+    });
+}
+
+/// @brief Configures the HTTP park button.
+///
+/// @param phone_type Phone type string.
+/// @param config Configuration parameters.
+/// @param http_server HTTP server.
+/// @param http_url HTTP URL of HTTP server.
+/// @param conn Pointer to Asterisk AMI connection.
+/// @param button_plan Application button plan.
+void configureHTTPParkButton(std::string const &phone_type, YAML::Node const &config, httplib::Server &http_server,
+                             std::string const &http_url, std::shared_ptr<cpp_ami::Connection> const &conn,
+                             std::shared_ptr<button_state::ButtonPlan> const &button_plan)
+{
+    auto const button_id = config["button_id"].as<uint16_t>();
+    auto const park_list_uri = config["park_list_path"].as<std::string>();
+    auto const park_info_uri = config["park_info_path"].as<std::string>();
+    auto const ast_button = button_plan->getEventHandler(button_id);
+    if (ast_button->getType() != asterisk::EventHandler::EventType::Park) {
+        syslog(LOG_WARNING, "Unable to configure park button URI %s", park_list_uri.c_str());
+        return;
+    }
+
+    auto const ast_park_button = std::dynamic_pointer_cast<asterisk::ParkEventHandler>(ast_button);
+    auto const http_button =
+        ui::HTTPParkButton::create(phone_type, conn, ast_park_button->getParkingLot(), http_url + park_info_uri);
+    assert(http_button);
+    http_server.Get(park_list_uri,
+                    [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
+                        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+                    });
+    http_server.Get(
+        park_info_uri,
+        [http_button](httplib::Request const &req, httplib::Response &res) -> void { // Serve parked call details
+            if (req.has_param("selection")) {
+                auto const exten = req.get_param_value("selection");
+                res.set_content(http_button->httpPushButton(exten), http_button->getContentType());
+                return;
+            }
+            res.set_content(http_button->displayErrorMessage("Missing Extension Parameter",
+                                                             "Missing URL parameter '&selection=xxx'."),
+                            http_button->getContentType());
+        });
+}
+
 /// @brief Creates HTTP button wrappers on application buttons.
 ///
 /// @param phone_type Phone type string.
@@ -234,67 +339,17 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
                          std::shared_ptr<ui::PhoneUI> const &ui)
 {
     auto const type = config["type"].as<std::string>();
-
     if (type == "http_state") {
-        auto const uri = config["path"].as<std::string>();
-        auto const http_button = std::dynamic_pointer_cast<ui::HTTPStateButton>(ui);
-        if (!http_button) {
-            syslog(LOG_WARNING, "Unable to configure phone state URI %s", uri.c_str());
-            return;
-        }
-        http_server.Get(uri,
-                        [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                            res.set_content(http_button->httpPushButton(), http_button->getContentType());
-                        });
+        configureHTTPStateButton(config, http_server, ui);
     }
     else if (type == "http_night") {
-        auto const button_id = config["button_id"].as<uint16_t>();
-        auto const uri = config["path"].as<std::string>();
-        auto const ast_button = button_plan->getEventHandler(button_id);
-        if (ast_button->getType() != asterisk::EventHandler::EventType::Night) {
-            syslog(LOG_WARNING, "Unable to configure night button URI %s", uri.c_str());
-            return;
-        }
-
-        auto const ast_night_button = std::dynamic_pointer_cast<asterisk::NightEventHandler>(ast_button);
-        auto const http_button = ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn,
-                                                             ast_night_button->getDevice());
-        assert(http_button);
-        http_server.Get(uri,
-                        [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                            res.set_content(http_button->httpPushButton(), http_button->getContentType());
-                        });
+        configureHTTPNightButton(phone_type, config, http_server, conn, button_plan);
     }
     else if (type == "http_park") {
-        auto const button_id = config["button_id"].as<uint16_t>();
-        auto const park_list_uri = config["park_list_path"].as<std::string>();
-        auto const park_info_uri = config["park_info_path"].as<std::string>();
-        auto const ast_button = button_plan->getEventHandler(button_id);
-        if (ast_button->getType() != asterisk::EventHandler::EventType::Park) {
-            syslog(LOG_WARNING, "Unable to configure park button URI %s", park_list_uri.c_str());
-            return;
-        }
-
-        auto const ast_park_button = std::dynamic_pointer_cast<asterisk::ParkEventHandler>(ast_button);
-        auto const http_button =
-            ui::HTTPParkButton::create(phone_type, conn, ast_park_button->getParkingLot(), http_url + park_info_uri);
-        assert(http_button);
-        http_server.Get(park_list_uri,
-                        [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                            res.set_content(http_button->httpPushButton(), http_button->getContentType());
-                        });
-        http_server.Get(
-            park_info_uri,
-            [http_button](httplib::Request const &req, httplib::Response &res) -> void { // Serve parked call details
-                if (req.has_param("selection")) {
-                    auto const exten = req.get_param_value("selection");
-                    res.set_content(http_button->httpPushButton(exten), http_button->getContentType());
-                    return;
-                }
-                res.set_content(http_button->displayErrorMessage("Missing Extension Parameter",
-                                                                 "Missing URL parameter '&selection=xxx'."),
-                                http_button->getContentType());
-            });
+        configureHTTPParkButton(phone_type, config, http_server, http_url, conn, button_plan);
+    }
+    else {
+        assert(false);
     }
 }
 

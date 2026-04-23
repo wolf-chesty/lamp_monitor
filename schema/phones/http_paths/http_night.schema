@@ -1,8 +1,8 @@
 button_id:
   _mandatory: true
   _type: unsigned int
-  _doc: "button plan button ID"
+  _doc: button plan button ID
 path:
   _mandatory: true
   _type: string
-  _doc: "HTTP button URI path"
+  _doc: HTTP button URI path
