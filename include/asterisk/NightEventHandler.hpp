@@ -26,8 +26,7 @@ namespace asterisk {
 class NightEventHandler : public EventHandler {
 public:
     explicit NightEventHandler(std::weak_ptr<button_state::PhoneButton> phone_button,
-                               std::shared_ptr<cpp_ami::Connection> io_conn, std::string night_exten,
-                               std::string context, std::string device);
+                               std::shared_ptr<cpp_ami::Connection> io_conn, std::string hint);
     ~NightEventHandler() override;
 
     /// @brief Creates an object of this type using the parameters from \c config.
@@ -49,7 +48,7 @@ public:
     /// @brief Returns the device that represents the night state on the Asterisk system.
     ///
     /// @return Name of the Asterisk device that keeps the Asterisk night state.
-    std::string getDevice();
+    std::string getHint();
 
 private:
     /// @brief Function that processes Asterisk AMI events.
@@ -58,9 +57,7 @@ private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
     std::weak_ptr<button_state::PhoneButton> phone_button_;     ///< Pointer to phone button state.
-    std::string night_exten_;                                   ///< Extension of the night button.
-    std::string context_;                                       ///< Context that the night extension is a member of.
-    std::string device_;                                        ///< Device name of the night button.
+    std::string hint_;                                        ///< Device name of the night button.
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Asterisk AMI callback ID.
 };
 

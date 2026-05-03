@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "xml/yealink/XmlPhonebook.hpp"
+#include "bridge/yealink/XmlPhonebook.hpp"
 
 #include <cassert>
 #include <pugixml.hpp>
 #include <sstream>
 #include <syslog.h>
 
-using namespace xml::yealink;
+using namespace bridge::yealink;
 
 XMLPhonebook::XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry)
     : HTTPPhonebook(std::move(phonebook_adapter))

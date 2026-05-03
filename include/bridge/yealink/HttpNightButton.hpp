@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-namespace xml::yealink {
+namespace bridge::yealink {
 
 /// @class HTTPNightButton
 /// @namespace xml::yealink

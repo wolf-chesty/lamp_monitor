@@ -63,28 +63,23 @@ database:
       _type: string
       _default: ""
       _doc: HTTP path to manually expire active deskphones from the cache
-    register_path:
-      _mandatory: false
-      _type: string
-      _default: ""
-      _doc: HTTP path to register a deskphone UI
 
 phonebooks:
   adapters:
     _mandatory: true
-    _type: PhonebookAdapter[]
+    _type: phonebook-adapter[]
     _doc: phonebook source adapter
   http_paths:
     _mandatory: true
-    _type: PhonebookHTTPPaths[]
+    _type: phonebook-http-path[]
     _doc: phonebook HTTP paths
 
 button_plans:
   _mandatory: true
-  _type: ButtonPlan[]
+  _type: button-plan[]
   _doc: button plan
 
 phones:
   _mandatory: true
-  _type: PhoneConfig[]
+  _type: phone-config[]
   _doc: phone config

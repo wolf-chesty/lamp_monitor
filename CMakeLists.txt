@@ -28,6 +28,7 @@ include(third_party/argparse.cmake)
 include(third_party/c++ami.cmake)
 include(third_party/cpp-httplib.cmake)
 include(third_party/dbpool.cmake)
+include(third_party/exprtk.cmake)
 
 if (COVERAGE)
     set(CPPAMI_COVERAGE ON)
@@ -76,6 +77,7 @@ target_link_libraries(lamp_monitor
     argparse
     c++ami
     dbpool
+    exprtk::exprtk
     httplib
     pugixml
     yaml-cpp::yaml-cpp
@@ -100,10 +102,10 @@ target_sources(lamp_monitor
     src/ui/HttpParkButton.cpp
     src/ui/PhoneUi.cpp
     src/ui/PhoneUiState.cpp
-    src/xml/yealink/CallParkMenu.cpp
-    src/xml/yealink/HttpNightButton.cpp
-    src/xml/yealink/PhoneUi.cpp
-    src/xml/yealink/XmlPhonebook.cpp
+    src/bridge/yealink/CallParkMenu.cpp
+    src/bridge/yealink/HttpNightButton.cpp
+    src/bridge/yealink/PhoneUi.cpp
+    src/bridge/yealink/XmlPhonebook.cpp
     src/main.cpp
 )
 

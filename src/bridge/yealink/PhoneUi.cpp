@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "xml/yealink/PhoneUi.hpp"
+#include "bridge/yealink/PhoneUi.hpp"
 
 #include "ui/PhoneUiState.hpp"
 #include <cassert>
 #include <fmt/core.h>
 
-using namespace xml::yealink;
+using namespace bridge::yealink;
 
 PhoneUI::PhoneUI(std::string name)
     : ui::PhoneUI(std::move(name))

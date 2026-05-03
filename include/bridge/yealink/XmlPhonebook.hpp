@@ -10,7 +10,7 @@
 #include <mutex>
 #include <string>
 
-namespace xml::yealink {
+namespace bridge::yealink {
 
 /// @class XMLPhonebook
 /// @namespace xml::yealink

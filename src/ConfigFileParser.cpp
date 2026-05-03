@@ -188,17 +188,6 @@ std::shared_ptr<DeskphoneCache> createDeskphoneCache(YAML::Node const &config, h
         });
     }
 
-    // Setup database registration HTTP endpoint
-    if (auto const &register_path = http_config["register_path"].as<std::string>(); !register_path.empty()) {
-        http_server.Get(register_path, [phone_cache](httplib::Request const &req, httplib::Response &res) -> void {
-            if (!req.has_param("aor") || !req.has_param("button_plan") || !req.has_param("phone_cfg")) {
-                res.status = 400;
-                return;
-            }
-            res.status = 204;
-        });
-    }
-
     return phone_cache;
 }
 
@@ -274,7 +263,7 @@ void configureHTTPNightButton(std::string const &phone_type, YAML::Node const &c
 
     auto const ast_night_button = std::dynamic_pointer_cast<asterisk::NightEventHandler>(ast_button);
     auto const http_button =
-        ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn, ast_night_button->getDevice());
+        ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn, ast_night_button->getHint());
     assert(http_button);
     http_server.Get(uri, [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
         res.set_content(http_button->httpPushButton(), http_button->getContentType());

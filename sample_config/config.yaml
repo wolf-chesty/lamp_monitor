@@ -43,9 +43,7 @@ button_plans:
         critical_off: false
         flash: solid
         type: night_button
-        exten: 900
-        context: local-set
-        device: Custom:night
+        hint: Custom:night
 
       - id: 2
         label: Park

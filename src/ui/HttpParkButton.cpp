@@ -3,7 +3,7 @@
 
 #include "ui/HttpParkButton.hpp"
 
-#include "xml/yealink/CallParkMenu.hpp"
+#include "bridge/yealink/CallParkMenu.hpp"
 #include <cassert>
 
 using namespace ui;
@@ -16,7 +16,7 @@ std::shared_ptr<HTTPParkButton> HTTPParkButton::create(std::string_view type,
     assert(!type.empty());
 
     if (type == "yealink") {
-        return std::make_shared<xml::yealink::CallParkMenu>(conn, parking_lot, parked_call_info_uri);
+        return std::make_shared<bridge::yealink::CallParkMenu>(conn, parking_lot, parked_call_info_uri);
     }
     return nullptr;
 }

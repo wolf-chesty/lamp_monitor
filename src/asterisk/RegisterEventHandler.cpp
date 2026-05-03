@@ -47,11 +47,10 @@ std::shared_ptr<button_state::ButtonPlan> RegisterEventHandler::getButtonPlan(st
 
 std::shared_ptr<ui::PhoneUI> RegisterEventHandler::getPhoneUI(std::string const &plan_name, std::string const &ui_name)
 {
-    auto const plan = getButtonPlan(plan_name);
-    if (!plan) {
-        return nullptr;
+    if (auto const plan = getButtonPlan(plan_name)) {
+        return plan->getPhoneUI(ui_name);
     }
-    return plan->getPhoneUI(ui_name);
+    return nullptr;
 }
 
 /// This callback is invoked for every AMI event that is published by the Asterisk server. This callback will process
@@ -75,7 +74,7 @@ void RegisterEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &even
 
     // Our site currently only has one phone, the Yealink T88W's. Need away to determine which group the phone belong to
     // and the phones UI type.
-    auto const phone_ui = getPhoneUI("default", "yealink_t88w");
+    auto const phone_ui = getPhoneUI("default", "yealink-t88w");
     if (!phone_ui) {
         return;
     }

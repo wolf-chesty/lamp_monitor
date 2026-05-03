@@ -20,7 +20,7 @@ public:
     static std::shared_ptr<HTTPNightButton> create(std::string_view type,
                                                    std::shared_ptr<button_state::PhoneButton> const &button,
                                                    std::shared_ptr<cpp_ami::Connection> const &conn,
-                                                   std::string const &device);
+                                                   std::string const &hint);
 
     virtual std::string httpPushButton() = 0;
     virtual std::string getContentType() = 0;

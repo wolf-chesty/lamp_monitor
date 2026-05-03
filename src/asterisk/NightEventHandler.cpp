@@ -10,13 +10,10 @@
 using namespace asterisk;
 
 NightEventHandler::NightEventHandler(std::weak_ptr<button_state::PhoneButton> phone_button,
-                                     std::shared_ptr<cpp_ami::Connection> io_conn, std::string night_exten,
-                                     std::string context, std::string device)
+                                     std::shared_ptr<cpp_ami::Connection> io_conn, std::string hint)
     : EventHandler(io_conn)
     , phone_button_(std::move(phone_button))
-    , night_exten_(std::move(night_exten))
-    , context_(std::move(context))
-    , device_(std::move(device))
+    , hint_(std::move(hint))
 {
     assert(io_conn);
     ami_callback_id_ =
@@ -39,8 +36,7 @@ std::shared_ptr<NightEventHandler>
     NightEventHandler::create(YAML::Node const &config, std::weak_ptr<button_state::PhoneButton> const &phone_button,
                               std::shared_ptr<cpp_ami::Connection> const &conn)
 {
-    return std::make_shared<NightEventHandler>(phone_button, conn, config["exten"].as<std::string>(),
-                                               config["context"].as<std::string>(), config["device"].as<std::string>());
+    return std::make_shared<NightEventHandler>(phone_button, conn, config["hint"].as<std::string>());
 }
 
 EventHandler::EventType NightEventHandler::getType() const
@@ -48,9 +44,9 @@ EventHandler::EventType NightEventHandler::getType() const
     return EventType::Night;
 }
 
-std::string NightEventHandler::getDevice()
+std::string NightEventHandler::getHint()
 {
-    return device_;
+    return hint_;
 }
 
 void NightEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &event)
@@ -64,7 +60,7 @@ void NightEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (!valid_events.contains(event_type.value())) {
         return;
     }
-    if (event["Context"] != context_ || event["Exten"] != night_exten_) {
+    if (event["Hint"] != hint_) {
         return;
     }
 
@@ -73,19 +69,13 @@ void NightEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (device_state == "0") {
         auto const phone_button = phone_button_.lock();
         assert(phone_button);
-        syslog(
-            LOG_DEBUG,
-            "NightButton::amiEventHandler() : Setting night button 'off'; exten=\"%s\", context=\"%s\", device=\"%s\"",
-            night_exten_.c_str(), context_.c_str(), device_.c_str());
+        syslog(LOG_DEBUG, "NightButton::amiEventHandler() : Setting night button 'off'; hint=\"%s\"", hint_.c_str());
         phone_button->setOn(false);
     }
     else if (device_state == "1") {
         auto const phone_button = phone_button_.lock();
         assert(phone_button);
-        syslog(
-            LOG_DEBUG,
-            "NightButton::amiEventHandler() : Setting night button 'on'; exten=\"%s\", context=\"%s\", device=\"%s\"",
-            night_exten_.c_str(), context_.c_str(), device_.c_str());
+        syslog(LOG_DEBUG, "NightButton::amiEventHandler() : Setting night button 'on'; hint=\"%s\"", hint_.c_str());
         phone_button->setOn(true);
     }
 }

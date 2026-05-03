@@ -5,5 +5,5 @@ name:
 buttons:
   _mandatory: true
   _type: derived[]
-  _base: ButtonPlanButton
+  _base: button-plan-button
   _doc: plan button

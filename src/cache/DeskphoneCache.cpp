@@ -62,11 +62,19 @@ void DeskphoneCache::initializeDatabase()
                     " ip TEXT NOT NULL,"
                     " port INT,"
                     " expiry INT64,"
-                    " PRIMARY KEY(aor, endpoint));");
-
+                    " PRIMARY KEY(aor, endpoint)"
+                    ");");
     // Database may contain old AOR endpoints that haven't expired from the cache yet. Expire these endpoints so that
     // initial lamp updates work.
     connection.exec("UPDATE endpoints SET expiry = 0;");
+
+    connection.exec("CREATE TABLE IF NOT EXISTS phone_uis ("
+                    "aor TEXT NOT NULL,"
+                    " button_plan TEXT NOT NULL,"
+                    " phone_type TEXT NOT NULL,"
+                    " PRIMARY KEY(aor)"
+                    ");");
+    connection.exec("DELETE FROM phone_uis;");
 }
 
 /// Adds a deskphone to the table of active deskphones on the SIP network.
@@ -94,7 +102,7 @@ bool DeskphoneCache::addEndpoint(std::string const &aor, std::string const &endp
 
     // Enqueue adding endpoint to the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::insert, aor, endpoint, (now + expiry_).time_since_epoch().count());
+    batch_.emplace_back(SQLAction::aor_insert, aor, endpoint, (now + expiry_).time_since_epoch().count());
     batch_write_cv_.notify_one();
 
     return !found_rec;
@@ -107,7 +115,7 @@ void DeskphoneCache::deleteEndpoint(std::string const &aor, std::string const &i
 
     // Enqueue expiring endpoint from the deskphone cache
     std::lock_guard const lock(batch_mut_);
-    batch_.emplace_back(SQLAction::remove, aor, ip, 0);
+    batch_.emplace_back(SQLAction::aor_remove, aor, ip, 0);
     batch_write_cv_.notify_one();
 }
 
@@ -210,7 +218,7 @@ void DeskphoneCache::writeThread()
 
         // Add/remove record(s) from database
         for (auto const &data : batch) {
-            if (data.action == SQLAction::insert) {
+            if (data.action == SQLAction::aor_insert) {
                 add_aor.bindText(1, data.aor);
                 add_aor.bindText(2, data.endpoint);
                 add_aor.bindInt64(3, data.expiry);
@@ -227,13 +235,12 @@ void DeskphoneCache::writeThread()
                 del_aor.reset();
             }
         }
+        batch.clear();
 
         // Commit transaction(s)
         ret = commit.execute();
         assert(ret == dbpool::PreparedStmt::ReturnCode::Done);
         commit.reset();
-
-        batch.clear();
     }
 
     syslog(LOG_DEBUG, "DeskphoneCache::workThread() : Stop thread");

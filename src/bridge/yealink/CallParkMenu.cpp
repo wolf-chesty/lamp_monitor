@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "xml/yealink/CallParkMenu.hpp"
+#include "bridge/yealink/CallParkMenu.hpp"
 
 #include <c++ami/action/ParkedCalls.hpp>
 #include <c++ami/reaction/EventList.hpp>
@@ -11,7 +11,7 @@
 #include <sstream>
 #include <syslog.h>
 
-using namespace xml::yealink;
+using namespace bridge::yealink;
 
 CallParkMenu::CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
                            std::string parked_call_info_uri)

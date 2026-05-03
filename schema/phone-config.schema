@@ -11,8 +11,13 @@ button_plan:
   _mandatory: true
   _type: string
   _doc: button plan name
+#adapter:
+#  _mandatory: true
+#  _type: derived
+#  _base: phone-config-adapter
+#  _doc: phone adapter
 http_paths:
-  _mandatory: true
+  _mandatory: false
   _type: derived[]
-  _base: PhoneHTTPPath
+  _base: phone-config-http-path
   _doc: phone HTTP paths

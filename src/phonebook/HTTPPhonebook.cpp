@@ -3,7 +3,7 @@
 
 #include "phonebook/HTTPPhonebook.hpp"
 
-#include "xml/yealink/XmlPhonebook.hpp"
+#include "bridge/yealink/XmlPhonebook.hpp"
 #include <cassert>
 
 using namespace phonebook;
@@ -17,7 +17,7 @@ std::shared_ptr<HTTPPhonebook> HTTPPhonebook::create(YAML::Node const &config, s
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "yealink") {
-        return xml::yealink::XMLPhonebook::create(config, adapter);
+        return bridge::yealink::XMLPhonebook::create(config, adapter);
     }
     assert(false);
     return nullptr;

@@ -3,9 +3,8 @@
 
 #include "ui/PhoneUi.hpp"
 
-#include "xml/yealink/PhoneUi.hpp"
+#include "bridge/yealink/PhoneUi.hpp"
 #include <cassert>
-#include <fmt/core.h>
 #include <shared_mutex>
 #include <syslog.h>
 
@@ -26,7 +25,7 @@ std::pair<std::string, std::shared_ptr<PhoneUI>> PhoneUI::create(YAML::Node cons
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "yealink") {
-        return xml::yealink::PhoneUI::create(config);
+        return bridge::yealink::PhoneUI::create(config);
     }
     assert(false);
     return std::make_pair("", nullptr);

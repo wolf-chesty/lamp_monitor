@@ -27,7 +27,7 @@ protected:
     /// @enum SQL action for write thread.
     ///
     /// @brief Identifies the SQL action to perform in the write thread.
-    enum class SQLAction { remove, insert };
+    enum class SQLAction { aor_remove, aor_insert };
 
     /// @struct HandesetData
     ///
@@ -37,6 +37,7 @@ protected:
         std::string aor;      ///< AOR of record.
         std::string endpoint; ///< Endpoint details of AOR object.
         int64_t expiry;       ///< Expiry timestamp of AOR record.
+
     };
 
 public:

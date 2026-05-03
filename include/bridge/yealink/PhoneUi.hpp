@@ -7,7 +7,7 @@
 #include "ui/HttpStateButton.hpp"
 #include "ui/PhoneUi.hpp"
 
-namespace xml::yealink {
+namespace bridge::yealink {
 
 /// @class PhoneUI
 /// @namespace xml::yealink

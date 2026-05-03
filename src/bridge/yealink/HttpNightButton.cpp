@@ -1,16 +1,16 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "xml/yealink/HttpNightButton.hpp"
+#include "bridge/yealink/HttpNightButton.hpp"
 
-#include "xml/yealink/PhoneUi.hpp"
+#include "bridge/yealink/PhoneUi.hpp"
 #include <c++ami/action/Setvar.hpp>
 #include <c++ami/util/ScopeGuard.hpp>
 #include <cassert>
 #include <fmt/core.h>
 #include <syslog.h>
 
-using namespace xml::yealink;
+using namespace bridge::yealink;
 
 HTTPNightButton::HTTPNightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
                                  std::shared_ptr<cpp_ami::Connection> io_conn, std::string device)

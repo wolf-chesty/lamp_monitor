@@ -21,7 +21,7 @@ namespace phonebook::adapter {
 /// system. This class will generate a list of caller ID records to be used with online phonebooks.
 class PJSIPWizardAdapter : public Adapter {
 public:
-    explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string filter);
+    explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string context);
     ~PJSIPWizardAdapter() override = default;
 
     /// @brief Creates a new object using configuration parameters from \c config.
@@ -38,7 +38,7 @@ public:
 
 private:
     std::shared_ptr<cpp_ami::Connection> io_conn_; ///< Pointer to Asterisk AMI server.
-    std::string filter_;                           ///< Filter for pjsip_wizard clients to grab caller ID details for.
+    std::string context_;                          ///< Filter for pjsip_wizard clients to grab caller ID details for.
 };
 
 } // namespace phonebook::adapter

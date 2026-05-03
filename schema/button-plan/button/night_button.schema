@@ -1,0 +1,4 @@
+hint:
+  _mandatory: true
+  _type: string
+  _doc: night button device name

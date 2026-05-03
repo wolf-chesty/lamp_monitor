@@ -3,7 +3,7 @@
 
 #include "ui/HttpNightButton.hpp"
 
-#include "xml/yealink/HttpNightButton.hpp"
+#include "bridge/yealink/HttpNightButton.hpp"
 #include <cassert>
 
 using namespace ui;
@@ -11,13 +11,13 @@ using namespace ui;
 std::shared_ptr<HTTPNightButton> HTTPNightButton::create(std::string_view type,
                                                          std::shared_ptr<button_state::PhoneButton> const &button,
                                                          std::shared_ptr<cpp_ami::Connection> const &conn,
-                                                         std::string const &device)
+                                                         std::string const &hint)
 {
     assert(!type.empty());
-    assert(!device.empty());
+    assert(!hint.empty());
 
     if (type == "yealink") {
-        return std::make_shared<xml::yealink::HTTPNightButton>(button, conn, device);
+        return std::make_shared<bridge::yealink::HTTPNightButton>(button, conn, hint);
     }
     return nullptr;
 }
