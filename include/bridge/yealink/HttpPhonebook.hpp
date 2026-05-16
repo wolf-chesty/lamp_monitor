@@ -1,0 +1,41 @@
+// Copyright (c) 2026 Christopher L Walker
+// SPDX-License-Identifier: MIT
+
+#ifndef BRIDGE_YEALINK_HTTP_PHONEBOOK_HPP
+#define BRIDGE_YEALINK_HTTP_PHONEBOOK_HPP
+
+#include "phonebook/HttpPhonebook.hpp"
+
+namespace bridge::yealink {
+
+/// @class HTTPPhonebook
+/// @namespace bridge::yealink
+///
+/// @brief Creates XML browser phonebook compatible with display on Yealink IP deskphones.
+class HTTPPhonebook : public phonebook::HTTPPhonebook {
+public:
+    explicit HTTPPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry);
+    ~HTTPPhonebook() override = default;
+
+    /// @brief Creates a new object using parameters from \c config.
+    ///
+    /// @param config Configuration options.
+    /// @param adapter Pointer to datasource adapter.
+    static std::shared_ptr<phonebook::HTTPPhonebook> create(YAML::Node const &config,
+                                                            std::shared_ptr<phonebook::Adapter> const &adapter);
+
+    /// @brief Returns the HTTP content type for text created by this object.
+    ///
+    /// @return HTTP content type for text created by this object.
+    std::string getContentType() override;
+
+protected:
+    /// @brief Returns XML browser phonebook.
+    ///
+    /// @return String containing XML browser phonebook compatible with Yealink IP deskphones.
+    std::string getPhonebookImpl() override;
+};
+
+} // namespace xml::yealink
+
+#endif

@@ -1,0 +1,8 @@
+symbol:
+  _doc: symbol name in match
+  _mandatory: true
+  _type: string
+key:
+  _doc: key name in JSON
+  _mandatory: true
+  _type: string

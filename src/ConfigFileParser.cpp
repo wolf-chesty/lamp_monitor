@@ -7,7 +7,7 @@
 #include "asterisk/ParkEventHandler.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
-#include "phonebook/HTTPPhonebook.hpp"
+#include "phonebook/HttpPhonebook.hpp"
 #include "ui/HttpNightButton.hpp"
 #include "ui/HttpParkButton.hpp"
 #include "ui/HttpStateButton.hpp"

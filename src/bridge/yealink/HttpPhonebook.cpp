@@ -1,41 +1,34 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "bridge/yealink/XmlPhonebook.hpp"
+#include "bridge/yealink/HttpPhonebook.hpp"
 
 #include <cassert>
 #include <pugixml.hpp>
 #include <sstream>
-#include <syslog.h>
 
 using namespace bridge::yealink;
 
-XMLPhonebook::XMLPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry)
-    : HTTPPhonebook(std::move(phonebook_adapter))
-    , expiry_(expiry)
+HTTPPhonebook::HTTPPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry)
+    : phonebook::HTTPPhonebook(std::move(phonebook_adapter), std::move(expiry))
 {
 }
 
-std::shared_ptr<phonebook::HTTPPhonebook> XMLPhonebook::create(YAML::Node const &config,
+std::shared_ptr<phonebook::HTTPPhonebook> HTTPPhonebook::create(YAML::Node const &config,
                                                                std::shared_ptr<phonebook::Adapter> const &adapter)
 {
     assert(config["type"].as<std::string>() == "yealink");
     std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
-    return std::make_shared<XMLPhonebook>(adapter, expiry);
+    return std::make_shared<HTTPPhonebook>(adapter, expiry);
 }
 
-std::string XMLPhonebook::getPhonebook()
+std::string HTTPPhonebook::getContentType()
 {
-    syslog(LOG_DEBUG, "XMLPhonebook::getPhonebookString() : Creating phonebook screen");
+    return "text/xml";
+}
 
-    std::lock_guard const lock(phonebook_xml_mut_);
-
-    // Phonebook XML is still valid
-    auto const now = clock_t::now();
-    if (timestamp_ > now) {
-        return phonebook_xml_;
-    }
-
+std::string HTTPPhonebook::getPhonebookImpl()
+{
     // Create XML document
     pugi::xml_document xml_doc;
     auto decl = xml_doc.append_child(pugi::node_declaration);
@@ -58,12 +51,5 @@ std::string XMLPhonebook::getPhonebook()
     // Create XML string
     std::ostringstream xml_string;
     xml_doc.save(xml_string, "", pugi::format_raw);
-    phonebook_xml_ = xml_string.str();
-
-    return phonebook_xml_;
-}
-
-std::string XMLPhonebook::getContentType()
-{
-    return "text/xml";
+    return xml_string.str();
 }

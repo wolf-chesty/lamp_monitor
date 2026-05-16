@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef XML_YEALINK_CALL_PARK_MENU_HPP
-#define XML_YEALINK_CALL_PARK_MENU_HPP
+#ifndef BRIDGE_YEALINK_HTTP_PARK_BUTTON_HPP
+#define BRIDGE_YEALINK_HTTP_PARK_BUTTON_HPP
 
 #include "ui/HttpParkButton.hpp"
 
@@ -12,19 +12,19 @@
 
 namespace bridge::yealink {
 
-/// @class CallParkMenu
-/// @namespace xml::yealink
+/// @class HTTPParkButton
+/// @namespace bridge::yealink
 ///
 /// @brief This class will create a call park menu for Yealink IP deskphones.
 ///
 /// This object can interact with the Asterisk server and return a list of parked phone calls that can be retrieved from
 /// parking using XML compatible with Yealink Android based deskphones. Objects can also create screens to view the
 /// details of parked calls.
-class CallParkMenu : public ui::HTTPParkButton {
+class HTTPParkButton : public ui::HTTPParkButton {
 public:
-    explicit CallParkMenu(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
+    explicit HTTPParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
                           std::string parked_call_info_uri);
-    ~CallParkMenu() override = default;
+    ~HTTPParkButton() override = default;
 
     /// @brief Creates an XML browser string containing a YealinkIPPhoneTextScreen body to display on a deskphone.
     ///

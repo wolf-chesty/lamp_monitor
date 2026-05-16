@@ -6,14 +6,17 @@
 
 #include "phonebook/Adapter.hpp"
 
+#include "asterisk/config/PjsipWizardConfig.hpp"
+#include "match/JsonExpressionMatcher.hpp"
 #include <c++ami/Connection.hpp>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace phonebook::adapter {
 
 /// @class PJSIPWizardAdapter
-/// @namespace phonebook
+/// @namespace phonebook::adapter
 ///
 /// @brief Retrieves caller ID details from the Asterisk pjsip_wizard.conf configuration file.
 ///
@@ -21,7 +24,8 @@ namespace phonebook::adapter {
 /// system. This class will generate a list of caller ID records to be used with online phonebooks.
 class PJSIPWizardAdapter : public Adapter {
 public:
-    explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string context);
+    explicit PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string match,
+                                std::unordered_map<std::string, std::string> symbol_map);
     ~PJSIPWizardAdapter() override = default;
 
     /// @brief Creates a new object using configuration parameters from \c config.
@@ -34,11 +38,11 @@ public:
                                                       std::shared_ptr<cpp_ami::Connection> const &conn);
 
     /// @brief Returns a collection of caller ID details.
-    std::vector<phonebook::CallerIDInfo> getPhonebookDetails() const override;
+    std::vector<phonebook::CallerIDInfo> getPhonebookDetails() override;
 
 private:
-    std::shared_ptr<cpp_ami::Connection> io_conn_; ///< Pointer to Asterisk AMI server.
-    std::string context_;                          ///< Filter for pjsip_wizard clients to grab caller ID details for.
+    asterisk::config::PJSIPWizardConfig config_;   ///< Asterisk pjsip_wizard.conf file reader.
+    match::JSONExpressionMatcher<double> matcher_; ///< JSON matcher.
 };
 
 } // namespace phonebook::adapter

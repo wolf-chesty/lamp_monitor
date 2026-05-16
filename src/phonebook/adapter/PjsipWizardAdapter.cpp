@@ -4,73 +4,60 @@
 #include "phonebook/adapter/PjsipWizardAdapter.hpp"
 
 #include <c++ami/action/GetConfigJson.hpp>
-#include <cassert>
-#include <exprtk.hpp>
 #include <regex>
 #include <syslog.h>
 #include <yaml-cpp/yaml.h>
 
 using namespace phonebook::adapter;
 
-PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string context)
-    : io_conn_(std::move(io_conn))
-    , context_(std::move(context))
+PJSIPWizardAdapter::PJSIPWizardAdapter(std::shared_ptr<cpp_ami::Connection> io_conn, std::string match,
+                                       std::unordered_map<std::string, std::string> symbol_map)
+    : config_(std::move(io_conn))
+    , matcher_(std::move(match), std::move(symbol_map))
 {
 }
 
 std::shared_ptr<PJSIPWizardAdapter> PJSIPWizardAdapter::create(YAML::Node const &config,
                                                                std::shared_ptr<cpp_ami::Connection> const &conn)
 {
-    return std::make_shared<PJSIPWizardAdapter>(conn, config["context"].as<std::string>());
-}
+    auto const match = config["match"].as<std::string>();
 
-std::vector<phonebook::CallerIDInfo> processWizardFile(cpp_ami::EventDispatcher::reaction_t const &reaction,
-                                                       std::string const &context)
-{
-    std::vector<phonebook::CallerIDInfo> phonebook_details;
-
-    reaction.forEach([context, &phonebook_details](cpp_ami::event::Event const &event) mutable -> bool {
-        try {
-            auto const cfg_yaml = YAML::Load(event["JSON"]);
-            for (auto const endpoint : cfg_yaml) {
-                auto const &aor_cfg_yaml = endpoint.second;
-                auto const type_node = aor_cfg_yaml["endpoint/context"];
-                if (!type_node) {
-                    continue;
-                }
-                if (type_node.as<std::string>() != context) {
-                    continue;
-                }
-                auto const caller_id_node = aor_cfg_yaml["endpoint/callerid"];
-                if (!caller_id_node) {
-                    continue;
-                }
-
-                if (auto const caller_id = caller_id_node.as<std::string>(); !caller_id.empty()) {
-                    std::regex re_pattern("\"([^\"]*)\" <([0-9]*)>");
-                    std::smatch matches;
-                    std::regex_search(caller_id, matches, re_pattern);
-                    phonebook_details.emplace_back(matches[1].str(), matches[2].str());
-                }
-            }
+    std::unordered_map<std::string, std::string> symbol_map;
+    for (auto const &itr : config["symbol_maps"]) {
+        auto const symbol = itr["symbol"].as<std::string>();
+        auto const key = itr["key"].as<std::string>();
+        auto const [_, success] = symbol_map.emplace(symbol, key);
+        if (!success) {
+            syslog(LOG_WARNING, "Duplicate symbol %s found", symbol.c_str());
         }
-        catch (std::exception const &e) {
-            syslog(LOG_ERR, "Unable to parse pjsip_wizard.conf");
-        }
-        return true;
-    });
+    }
 
-    return phonebook_details;
+    return std::make_shared<PJSIPWizardAdapter>(conn, match, symbol_map);
 }
 
 /// Parses the Asterisk pjsip_wizard.conf file, returning the caller ID information for each AOR endpoint found.
 /// Endpoints are filtered by the template setting.
-std::vector<phonebook::CallerIDInfo> PJSIPWizardAdapter::getPhonebookDetails() const
+std::vector<phonebook::CallerIDInfo> PJSIPWizardAdapter::getPhonebookDetails()
 {
-    cpp_ami::action::GetConfigJSON action;
-    action["Filename"] = "pjsip_wizard.conf";
-    if (auto const reaction = io_conn_->invoke(action); reaction->isSuccess()) {
-        return processWizardFile(*reaction, context_);
-    }
-    return std::vector<phonebook::CallerIDInfo>{};
+    std::vector<phonebook::CallerIDInfo> phonebook_details;
+    config_.process([this, &phonebook_details](YAML::Node const &aor_cfg_json) mutable -> void {
+        if (!matcher_.isMatch(aor_cfg_json)) {
+            return;
+        }
+
+        auto const &caller_id_node = aor_cfg_json["endpoint/callerid"];
+        // Missing caller ID node; move onto next AoR
+        if (!caller_id_node) {
+            return;
+        }
+
+        // Parse out caller ID details
+        if (auto const caller_id = caller_id_node.as<std::string>(); !caller_id.empty()) {
+            std::regex re_pattern("\"([^\"]*)\" <([0-9]*)>");
+            std::smatch matches;
+            std::regex_search(caller_id, matches, re_pattern);
+            phonebook_details.emplace_back(matches[1].str(), matches[2].str());
+        }
+    });
+    return phonebook_details;
 }

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef XML_YEALINK_PHONE_UI_HPP
-#define XML_YEALINK_PHONE_UI_HPP
+#ifndef BRIDGE_YEALINK_PHONE_UI_HPP
+#define BRIDGE_YEALINK_PHONE_UI_HPP
 
 #include "ui/HttpStateButton.hpp"
 #include "ui/PhoneUi.hpp"
@@ -10,7 +10,7 @@
 namespace bridge::yealink {
 
 /// @class PhoneUI
-/// @namespace xml::yealink
+/// @namespace bridge::yealink
 ///
 /// @brief Class generates XML browser code for Yealink deskphones.
 class PhoneUI

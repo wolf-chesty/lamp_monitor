@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef XML_YEALINK_HTTP_NIGHT_BUTTON_HPP
-#define XML_YEALINK_HTTP_NIGHT_BUTTON_HPP
+#ifndef BRIDGE_YEALINK_HTTP_NIGHT_BUTTON_HPP
+#define BRIDGE_YEALINK_HTTP_NIGHT_BUTTON_HPP
 
 #include "ui/HttpNightButton.hpp"
 #include <button_state/PhoneButton.hpp>
@@ -13,7 +13,7 @@
 namespace bridge::yealink {
 
 /// @class HTTPNightButton
-/// @namespace xml::yealink
+/// @namespace bridge::yealink
 ///
 /// @brief This object provides an HTTP facing "night button".
 ///

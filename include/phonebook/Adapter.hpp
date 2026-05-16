@@ -33,7 +33,7 @@ public:
     static std::shared_ptr<Adapter> create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn);
 
     /// @brief Returns a collection of caller ID details.
-    virtual std::vector<CallerIDInfo> getPhonebookDetails() const = 0;
+    virtual std::vector<CallerIDInfo> getPhonebookDetails() = 0;
 };
 
 } // namespace phonebook

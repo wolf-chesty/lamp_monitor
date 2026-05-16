@@ -100,7 +100,8 @@ private:
     /// @brief Converts YAML flash mode type string to an enum.
     ///
     /// @param flash_mode YAML flash mode type string.
-    ///    /// @return Enum flash type.
+    ///
+    /// @return Enum flash type.
     static FlashMode toFlashMode(std::string_view flash_mode);
 
     std::weak_ptr<ButtonPlan> button_plan_;  ///< Pointer to lamp field that monitors this button.
