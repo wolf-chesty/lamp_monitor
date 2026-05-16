@@ -3,18 +3,18 @@
 
 #include "bridge/yealink/PhoneUi.hpp"
 
-#include "ui/PhoneUiState.hpp"
+#include "bridge/PhoneUiState.hpp"
 #include <cassert>
 #include <fmt/core.h>
 
 using namespace bridge::yealink;
 
 PhoneUI::PhoneUI(std::string name)
-    : ui::PhoneUI(std::move(name))
+    : bridge::PhoneUI(std::move(name))
 {
 }
 
-std::pair<std::string, std::shared_ptr<ui::PhoneUI>> PhoneUI::create(YAML::Node const &config)
+std::pair<std::string, std::shared_ptr<bridge::PhoneUI>> PhoneUI::create(YAML::Node const &config)
 {
     auto const ui = std::make_shared<PhoneUI>(config["name"].as<std::string>());
     return std::make_pair(ui->getName(), ui);
@@ -99,13 +99,13 @@ std::pair<pugi::xml_document, bool>
 std::string PhoneUI::createYealinkXMLString(std::shared_ptr<button_state::PhoneButton> const button)
 {
     auto const [xml, _] = createYealinkXML(button, false);
-    return ui::PhoneUIState::toString(xml);
+    return bridge::PhoneUIState::toString(xml);
 }
 
 std::string PhoneUI::createYealinkXMLString(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
 {
     auto const [xml, _] = createYealinkXML(buttons, false);
-    return ui::PhoneUIState::toString(xml);
+    return bridge::PhoneUIState::toString(xml);
 }
 
 std::pair<pugi::xml_document, bool> PhoneUI::createYealinkXML(std::shared_ptr<button_state::PhoneButton> const &button,

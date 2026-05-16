@@ -9,14 +9,14 @@
 
 using namespace button_state;
 
-ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<ui::PhoneEventDispatcher> ami_bridge)
+ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneEventDispatcher> ami_bridge)
     : name_(std::move(name))
     , ami_bridge_(std::move(ami_bridge))
 {
 }
 
 std::shared_ptr<ButtonPlan> ButtonPlan::create(YAML::Node const &config,
-                                               std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge)
+                                               std::shared_ptr<bridge::PhoneEventDispatcher> const &ami_bridge)
 {
     auto const &name = config["name"].as<std::string>();
     auto const button_plan = std::make_shared<ButtonPlan>(name, ami_bridge);
@@ -74,7 +74,7 @@ void ButtonPlan::invalidate([[maybe_unused]] uint16_t const button_id)
                   });
 }
 
-bool ButtonPlan::registerUI(std::string const &ui_name, std::shared_ptr<ui::PhoneUI> const &ui)
+bool ButtonPlan::registerUI(std::string const &ui_name, std::shared_ptr<bridge::PhoneUI> const &ui)
 {
     std::lock_guard const lock(phone_uis_mut_);
     auto const &[itr, success] = phone_uis_.emplace(ui_name, ui);
@@ -90,7 +90,7 @@ void ButtonPlan::unregisterUI(std::string const &ui_name)
     phone_uis_.erase(ui_name);
 }
 
-std::shared_ptr<ui::PhoneUI> ButtonPlan::getPhoneUI(std::string const &ui_type)
+std::shared_ptr<bridge::PhoneUI> ButtonPlan::getPhoneUI(std::string const &ui_type)
 {
     std::shared_lock const lock(phone_uis_mut_);
     auto const itr = phone_uis_.find(ui_type);

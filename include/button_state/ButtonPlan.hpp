@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef BUTTON_STATE_LAMP_FIELD_HPP
-#define BUTTON_STATE_LAMP_FIELD_HPP
+#ifndef BUTTON_STATE_BUTTON_PLAN_HPP
+#define BUTTON_STATE_BUTTON_PLAN_HPP
 
+#include "bridge/PhoneEventDispatcher.hpp"
+#include "bridge/PhoneUi.hpp"
 #include "asterisk/EventHandler.hpp"
 #include "button_state/PhoneButton.hpp"
-#include "ui/PhoneEventDispatcher.hpp"
-#include "ui/PhoneUi.hpp"
 #include <memory>
 #include <shared_mutex>
 #include <unordered_map>
@@ -26,11 +26,11 @@ namespace button_state {
 /// button plan objects can be shared between deskphones.
 ///
 /// This object also has a list of phone UI objects that are responsible for rendering button state of the physical
-/// hardware deskphones. As button states occur this object will use this collection of phone UI objects to render the
-/// current deskphone button state and send that information to each phone on the network.
+/// hardware deskphones. As button state changes occur this object will use its collection of phone UI objects to
+/// render the current deskphone button state and send that information to each phone on the network.
 class ButtonPlan {
 public:
-    explicit ButtonPlan(std::string name, std::shared_ptr<ui::PhoneEventDispatcher> ami_bridge);
+    explicit ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneEventDispatcher> ami_bridge);
     ~ButtonPlan() = default;
 
     /// @brief Creates a new object using configuration paramters from \c config.
@@ -40,7 +40,7 @@ public:
     ///
     /// @return Pointer to new object.
     static std::shared_ptr<ButtonPlan> create(YAML::Node const &config,
-                                              std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge);
+                                              std::shared_ptr<bridge::PhoneEventDispatcher> const &ami_bridge);
 
     /// @brief Returns the name of the object.
     ///
@@ -74,7 +74,7 @@ public:
     ///
     /// @param ui_name Phone UI name.
     /// @param ui Phone UI object.
-    bool registerUI(std::string const &ui_name, std::shared_ptr<ui::PhoneUI> const &ui);
+    bool registerUI(std::string const &ui_name, std::shared_ptr<bridge::PhoneUI> const &ui);
 
     /// @brief Remove phone UI from this lamp field.
     ///
@@ -86,7 +86,7 @@ public:
     /// @param ui_name Phone UI key.
     ///
     /// @return Pointer to phone UI object.
-    std::shared_ptr<ui::PhoneUI> getPhoneUI(std::string const &ui_name);
+    std::shared_ptr<bridge::PhoneUI> getPhoneUI(std::string const &ui_name);
 
     /// @brief Invalidates the lamp field object.
     ///
@@ -112,10 +112,10 @@ public:
 
 private:
     std::string name_;                                                        ///< Plan name.
-    std::shared_ptr<ui::PhoneEventDispatcher> ami_bridge_;                    ///< Bridge to deskphones.
+    std::shared_ptr<bridge::PhoneEventDispatcher> ami_bridge_;                    ///< Bridge to deskphones.
     std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_;      ///< Collection of observed buttons.
     std::shared_mutex buttons_mut_;                                           ///< Mutex on button collection.
-    std::unordered_map<std::string, std::shared_ptr<ui::PhoneUI>> phone_uis_; ///< Phone UI's to render this object.
+    std::unordered_map<std::string, std::shared_ptr<bridge::PhoneUI>> phone_uis_; ///< Phone UI's to render this object.
     std::shared_mutex phone_uis_mut_;                                         ///< Mutex on phone UI collection.
     std::unordered_map<uint16_t, std::shared_ptr<asterisk::EventHandler>>
         event_handlers_; ///< Collection of event handlers that can change button states managed by this object.

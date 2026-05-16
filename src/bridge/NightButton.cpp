@@ -1,18 +1,18 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "bridge/yealink/HttpNightButton.hpp"
+#include "bridge/NightButton.hpp"
 
-#include "bridge/yealink/PhoneUi.hpp"
+#include "bridge/yealink/NightButton.hpp"
 #include <c++ami/action/Setvar.hpp>
 #include <c++ami/util/ScopeGuard.hpp>
 #include <cassert>
 #include <fmt/core.h>
 #include <syslog.h>
 
-using namespace bridge::yealink;
+using namespace bridge;
 
-HTTPNightButton::HTTPNightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
+NightButton::NightButton(std::shared_ptr<button_state::PhoneButton> phone_button,
                                  std::shared_ptr<cpp_ami::Connection> io_conn, std::string device)
     : button_(std::move(phone_button))
     , io_conn_(std::move(io_conn))
@@ -22,9 +22,23 @@ HTTPNightButton::HTTPNightButton(std::shared_ptr<button_state::PhoneButton> phon
     assert(io_conn_);
 }
 
-std::string HTTPNightButton::httpPushButton()
+std::shared_ptr<NightButton> NightButton::create(std::string_view type,
+                                                         std::shared_ptr<button_state::PhoneButton> const &button,
+                                                         std::shared_ptr<cpp_ami::Connection> const &conn,
+                                                         std::string const &device)
 {
-    assert(button_);
+    assert(!type.empty());
+    assert(!device.empty());
+
+    if (type == "yealink") {
+        return std::make_shared<bridge::yealink::NightButton>(button, conn, device);
+    }
+    assert(false);
+    return nullptr;
+}
+
+std::string NightButton::pushButton()
+{
     auto const button_on = !button_->isOn();
 
     // Update device state on Asterisk server
@@ -37,15 +51,5 @@ std::string HTTPNightButton::httpPushButton()
         io_conn->asyncInvoke(action);
     });
 
-    // Return XML for new button state
-    syslog(LOG_DEBUG, "HTTPNightButton::pushButton() : Setting night button to \"%s\"", button_on ? "on" : "off");
-    auto const inverted_button = button_->clone();
-    inverted_button->setOn(button_on);
-    return PhoneUI::createYealinkXMLString(inverted_button);
-}
-
-std::string HTTPNightButton::getContentType()
-{
-    static std::string content_type{"text/xml"};
-    return content_type;
+    return pushButton(button_->clone(), button_on);
 }

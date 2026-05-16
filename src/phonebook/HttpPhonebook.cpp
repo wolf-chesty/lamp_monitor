@@ -3,8 +3,8 @@
 
 #include "phonebook/HttpPhonebook.hpp"
 
-#include "bridge/snom/HttpPhonebook.hpp"
-#include "bridge/yealink/HttpPhonebook.hpp"
+#include "phonebook/yealink/HttpPhonebook.hpp"
+#include "phonebook/snom/HttpPhonebook.hpp"
 #include <cassert>
 #include <syslog.h>
 
@@ -20,10 +20,10 @@ std::shared_ptr<HTTPPhonebook> HTTPPhonebook::create(YAML::Node const &config, s
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "snom") {
-        return bridge::snom::HTTPPhonebook::create(config, adapter);
+        return phonebook::snom::HTTPPhonebook::create(config, adapter);
     }
     else if (type == "yealink") {
-        return bridge::yealink::HTTPPhonebook::create(config, adapter);
+        return phonebook::yealink::HTTPPhonebook::create(config, adapter);
     }
 
     assert(false);

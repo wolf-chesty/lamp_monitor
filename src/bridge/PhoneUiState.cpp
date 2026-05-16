@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "ui/PhoneUiState.hpp"
+#include "bridge/PhoneUiState.hpp"
 
 #include <sstream>
 
-using namespace ui;
+using namespace bridge;
 
 PhoneUIState::PhoneUIState(pugi::xml_document xml, bool is_critical)
     : xml_(std::move(xml))

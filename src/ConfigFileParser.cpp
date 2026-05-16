@@ -5,14 +5,14 @@
 
 #include "asterisk/NightEventHandler.hpp"
 #include "asterisk/ParkEventHandler.hpp"
+#include "bridge/HttpStateButton.hpp"
+#include "bridge/NightButton.hpp"
+#include "bridge/ParkButton.hpp"
+#include "bridge/PhoneEventDispatcher.hpp"
+#include "bridge/PhoneUi.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
 #include "phonebook/HttpPhonebook.hpp"
-#include "ui/HttpNightButton.hpp"
-#include "ui/HttpParkButton.hpp"
-#include "ui/HttpStateButton.hpp"
-#include "ui/PhoneEventDispatcher.hpp"
-#include "ui/PhoneUi.hpp"
 #include <c++ami/action/Login.hpp>
 #include <errno.h>
 #include <grp.h>
@@ -229,10 +229,10 @@ std::vector<std::pair<uint16_t, std::shared_ptr<asterisk::EventHandler>>>
 /// @param http_server HTTP server.
 /// @param ui Pointer to deskphone interfece renderer.
 void configureHTTPStateButton(YAML::Node const &config, httplib::Server &http_server,
-                              std::shared_ptr<ui::PhoneUI> const &ui)
+                              std::shared_ptr<bridge::PhoneUI> const &ui)
 {
     auto const uri = config["path"].as<std::string>();
-    auto const http_button = std::dynamic_pointer_cast<ui::HTTPStateButton>(ui);
+    auto const http_button = std::dynamic_pointer_cast<bridge::HTTPStateButton>(ui);
     if (!http_button) {
         syslog(LOG_WARNING, "Unable to configure phone state URI %s", uri.c_str());
         return;
@@ -263,10 +263,10 @@ void configureHTTPNightButton(std::string const &phone_type, YAML::Node const &c
 
     auto const ast_night_button = std::dynamic_pointer_cast<asterisk::NightEventHandler>(ast_button);
     auto const http_button =
-        ui::HTTPNightButton::create(phone_type, button_plan->getButton(button_id), conn, ast_night_button->getHint());
+        bridge::NightButton::create(phone_type, button_plan->getButton(button_id), conn, ast_night_button->getHint());
     assert(http_button);
     http_server.Get(uri, [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+        res.set_content(http_button->pushButton(), http_button->getContentType());
     });
 }
 
@@ -293,18 +293,18 @@ void configureHTTPParkButton(std::string const &phone_type, YAML::Node const &co
 
     auto const ast_park_button = std::dynamic_pointer_cast<asterisk::ParkEventHandler>(ast_button);
     auto const http_button =
-        ui::HTTPParkButton::create(phone_type, conn, ast_park_button->getParkingLot(), http_url + park_info_uri);
+        bridge::ParkButton::create(phone_type, conn, ast_park_button->getParkingLot(), http_url + park_info_uri);
     assert(http_button);
     http_server.Get(park_list_uri,
                     [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+                        res.set_content(http_button->pushButton(), http_button->getContentType());
                     });
     http_server.Get(
         park_info_uri,
         [http_button](httplib::Request const &req, httplib::Response &res) -> void { // Serve parked call details
             if (req.has_param("selection")) {
                 auto const exten = req.get_param_value("selection");
-                res.set_content(http_button->httpPushButton(exten), http_button->getContentType());
+                res.set_content(http_button->pushButton(exten), http_button->getContentType());
                 return;
             }
             res.set_content(http_button->displayErrorMessage("Missing Extension Parameter",
@@ -325,7 +325,7 @@ void configureHTTPParkButton(std::string const &phone_type, YAML::Node const &co
 void configureHTTPButton(std::string const &phone_type, YAML::Node const &config, httplib::Server &http_server,
                          std::string const &http_url, std::shared_ptr<cpp_ami::Connection> const &conn,
                          std::shared_ptr<button_state::ButtonPlan> const &button_plan,
-                         std::shared_ptr<ui::PhoneUI> const &ui)
+                         std::shared_ptr<bridge::PhoneUI> const &ui)
 {
     auto const type = config["type"].as<std::string>();
     if (type == "http_state") {
@@ -352,7 +352,7 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
 /// @return Button plan name, button plan pair.
 std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
     createPhonePlans(YAML::Node const &config, httplib::Server &http_server,
-                     std::shared_ptr<ui::PhoneEventDispatcher> const &ami_bridge,
+                     std::shared_ptr<bridge::PhoneEventDispatcher> const &ami_bridge,
                      std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     // Lambda to create button plan
@@ -396,7 +396,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
         assert(success);
 
         // Create phone UI and add it as a renderer for the button plan
-        auto const [ui_name, ui] = ui::PhoneUI::create(phone_cfg);
+        auto const [ui_name, ui] = bridge::PhoneUI::create(phone_cfg);
         success = button_plan->registerUI(ui_name, ui);
         assert(success);
 
@@ -414,7 +414,7 @@ std::shared_ptr<asterisk::RegisterEventHandler>
                                std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     auto const phone_cache = createDeskphoneCache(config["database"], http_server);
-    auto const ami_bridge = std::make_shared<ui::PhoneEventDispatcher>(conn, phone_cache);
+    auto const ami_bridge = std::make_shared<bridge::PhoneEventDispatcher>(conn, phone_cache);
     auto const phone_plans = createPhonePlans(config, http_server, ami_bridge, conn);
 
     auto event_handler = std::make_shared<asterisk::RegisterEventHandler>(phone_cache, conn);

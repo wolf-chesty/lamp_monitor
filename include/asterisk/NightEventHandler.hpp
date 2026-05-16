@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef AST_BRIDGE_NIGHT_EVENT_HANDLER_HPP
-#define AST_BRIDGE_NIGHT_EVENT_HANDLER_HPP
+#ifndef ASTERISK_NIGHT_EVENT_HANDLER_HPP
+#define ASTERISK_NIGHT_EVENT_HANDLER_HPP
 
 #include "asterisk/EventHandler.hpp"
 

@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "ui/HttpParkButton.hpp"
+#include "bridge/ParkButton.hpp"
 
-#include "bridge/yealink/HttpParkButton.hpp"
+#include "bridge/yealink/ParkButton.hpp"
 #include <cassert>
 
-using namespace ui;
+using namespace bridge;
 
-std::shared_ptr<HTTPParkButton> HTTPParkButton::create(std::string_view type,
+std::shared_ptr<ParkButton> ParkButton::create(std::string_view type,
                                                        std::shared_ptr<cpp_ami::Connection> const &conn,
                                                        std::string const &parking_lot,
                                                        std::string const &parked_call_info_uri)
@@ -16,7 +16,7 @@ std::shared_ptr<HTTPParkButton> HTTPParkButton::create(std::string_view type,
     assert(!type.empty());
 
     if (type == "yealink") {
-        return std::make_shared<bridge::yealink::HTTPParkButton>(conn, parking_lot, parked_call_info_uri);
+        return std::make_shared<bridge::yealink::ParkButton>(conn, parking_lot, parked_call_info_uri);
     }
     return nullptr;
 }

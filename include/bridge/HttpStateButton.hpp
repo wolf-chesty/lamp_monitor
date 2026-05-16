@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef UI_HTTP_STATE_BUTTON_HPP
-#define UI_HTTP_STATE_BUTTON_HPP
+#ifndef BRIDGE_HTTP_STATE_BUTTON_HPP
+#define BRIDGE_HTTP_STATE_BUTTON_HPP
 
 #include <string>
 
-namespace ui {
+namespace bridge {
 
 class HTTPStateButton {
 public:

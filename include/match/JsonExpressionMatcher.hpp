@@ -38,24 +38,24 @@ public:
 
     ~JSONExpressionMatcher() = default;
 
-    /// @brief Returns \c true if this YAML node matches the match expression.
+    /// @brief Returns \c true if YAML node \c node matches the match expression.
     ///
-    /// @param node Node to check.
+    /// @param node Node to evaluate.
     bool isMatch(YAML::Node const &node)
     {
         return is_valid_ast_ ? evaluate(node) : compile(node);
     }
 
 private:
-    /// @brief Compiles the match statement returning \c true if \c node matches the match statement.
+    /// @brief Compiles the match statement returning \c true if \c doc matches the match statement.
     ///
-    /// @param doc Node to check for match.
+    /// @param doc Node to evaluate for match.
     ///
-    /// @return \c true if \c node matches the match expression.
+    /// @return \c true if \c doc matches the match expression.
     ///
     /// This function will compile the statement populating the symbol table with symbols that are found in the
-    /// expression. If the expression successfully compiles and all the symbols found this function will cache the AST
-    /// so that future YAML nodes can be evaluated without having to recompile the match expression.
+    /// expression. If the expression successfully compiles and all the symbols are found this function will cache the
+    /// AST so that future YAML nodes can be evaluated without having to recompile the match expression.
     bool compile(YAML::Node const &doc)
     {
         // Setup compiler
@@ -70,12 +70,12 @@ private:
         return evaluate(doc);
     }
 
-    /// @brief Evaluates \c node against the cached abstract syntax tree returning \c true if \c node matches the match
+    /// @brief Evaluates \c doc against the cached abstract syntax tree returning \c true if \c doc matches the match
     ///        statement.
     ///
-    /// @param doc Node to check for match.
+    /// @param doc Node to evaluate for match.
     ///
-    /// @return \c true if \c node matches the match expression.
+    /// @return \c true if \c doc matches the match expression.
     bool evaluate(YAML::Node const &doc)
     {
         for (auto &[symbol, value] : string_table_) {
@@ -98,6 +98,6 @@ private:
     std::unordered_map<std::string, std::string> string_table_; ///< Table of string values.
 };
 
-} // namespace phonebook::adapter
+} // namespace match
 
 #endif

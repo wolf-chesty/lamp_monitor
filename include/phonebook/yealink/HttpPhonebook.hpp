@@ -1,18 +1,17 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef BRIDGE_SNOM_HTTP_PHONEBOOK_HPP
-#define BRIDGE_SNOM_HTTP_PHONEBOOK_HPP
+#ifndef PHONEBOOK_YEALINK_HTTP_PHONEBOOK_HPP
+#define PHONEBOOK_YEALINK_HTTP_PHONEBOOK_HPP
 
 #include "phonebook/HttpPhonebook.hpp"
 
-namespace bridge::snom {
-
+namespace phonebook::yealink {
 
 /// @class HTTPPhonebook
-/// @namespace bridge::snom
+/// @namespace phonebook::yealink
 ///
-/// @brief Creates XML browser phonebook compatible with display on Snom IP deskphones.
+/// @brief Creates XML browser phonebook compatible with display on Yealink IP deskphones.
 class HTTPPhonebook : public phonebook::HTTPPhonebook {
 public:
     explicit HTTPPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry);
@@ -33,10 +32,10 @@ public:
 protected:
     /// @brief Returns XML browser phonebook.
     ///
-    /// @return String containing XML browser phonebook compatible with Snom IP deskphones.
+    /// @return String containing XML browser phonebook compatible with Yealink IP deskphones.
     std::string getPhonebookImpl() override;
 };
 
-}
+} // namespace xml::yealink
 
 #endif

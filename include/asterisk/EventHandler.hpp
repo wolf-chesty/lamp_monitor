@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef AST_BRIDGE_EVENT_HANDLER_HPP
-#define AST_BRIDGE_EVENT_HANDLER_HPP
+#ifndef ASTERISK_EVENT_HANDLER_HPP
+#define ASTERISK_EVENT_HANDLER_HPP
 
 #include <c++ami/Connection.hpp>
 

@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "ui/PhoneEventDispatcher.hpp"
+#include "bridge/PhoneEventDispatcher.hpp"
 
 #include <cassert>
 #include <syslog.h>
 
-using namespace ui;
+using namespace bridge;
 
 PhoneEventDispatcher::PhoneEventDispatcher(std::shared_ptr<cpp_ami::Connection> io_conn,
                                            std::shared_ptr<DeskphoneCache> deskphone_cache)

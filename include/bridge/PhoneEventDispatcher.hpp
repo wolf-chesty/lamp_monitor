@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef UI_ACTION_DISPATCHER_HPP
-#define UI_ACTION_DISPATCHER_HPP
+#ifndef BRIDGE_ACTION_DISPATCHER_HPP
+#define BRIDGE_ACTION_DISPATCHER_HPP
 
 #include "cache/DeskphoneCache.hpp"
 #include <atomic>
@@ -13,10 +13,10 @@
 #include <thread>
 #include <vector>
 
-namespace ui {
+namespace bridge {
 
 /// @class PhoneEventDispatcher
-/// @namespace ui
+/// @namespace bridge
 ///
 /// @brief This class will push the application UI phone state to the actual hardware deskphones on the network,
 ///        providing a software to hardware bridge.

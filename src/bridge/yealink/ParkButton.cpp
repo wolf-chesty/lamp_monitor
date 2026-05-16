@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "bridge/yealink/HttpParkButton.hpp"
+#include "bridge/yealink/ParkButton.hpp"
 
 #include <c++ami/action/ParkedCalls.hpp>
 #include <c++ami/reaction/EventList.hpp>
@@ -13,7 +13,7 @@
 
 using namespace bridge::yealink;
 
-HTTPParkButton::HTTPParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
+ParkButton::ParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
                            std::string parked_call_info_uri)
     : io_conn_(std::move(io_conn))
     , parking_lot_(std::move(parking_lot))
@@ -22,7 +22,7 @@ HTTPParkButton::HTTPParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std
     assert(io_conn_);
 }
 
-std::string HTTPParkButton::createMessageXML(bool const beep, uint8_t const timeout, std::string const &title,
+std::string ParkButton::createMessageXML(bool const beep, uint8_t const timeout, std::string const &title,
                                            std::string const &text)
 {
     pugi::xml_document doc;
@@ -48,7 +48,7 @@ std::string HTTPParkButton::createMessageXML(bool const beep, uint8_t const time
     return xml_string.str();
 }
 
-std::string HTTPParkButton::httpPushButton() const
+std::string ParkButton::pushButton() const
 {
     assert(io_conn_);
 
@@ -61,7 +61,7 @@ std::string HTTPParkButton::httpPushButton() const
                                                 : createParkedCallMenu(*ami_response_list);
 }
 
-std::string HTTPParkButton::getContentType() const
+std::string ParkButton::getContentType() const
 {
     static std::string content_type{"text/xml"};
     return content_type;
@@ -84,7 +84,7 @@ void createParkedCallNode(pugi::xml_node parked_call, std::string_view parked_ca
     selection.append_child(pugi::node_pcdata).set_value(event["ParkingSpace"]);
 }
 
-std::string HTTPParkButton::createParkedCallMenu(cpp_ami::reaction::EventList const &parked_call_list) const
+std::string ParkButton::createParkedCallMenu(cpp_ami::reaction::EventList const &parked_call_list) const
 {
     syslog(LOG_DEBUG, "CallParkMenu::createParkedCallMenu() : Creating parked call menu");
 
@@ -116,14 +116,14 @@ std::string HTTPParkButton::createParkedCallMenu(cpp_ami::reaction::EventList co
     return parked_call_menu_xml.str();
 }
 
-std::string HTTPParkButton::createNoParkedCallMessage()
+std::string ParkButton::createNoParkedCallMessage()
 {
     syslog(LOG_DEBUG, "CallParkMenu::createNoParkedCallMessages() : Creating phone screen");
 
     return createMessageXML(false, 5, "Parked Calls: 0", "No parked calls.");
 }
 
-std::string HTTPParkButton::httpPushButton(std::string const &park_exten) const
+std::string ParkButton::pushButton(std::string const &park_exten) const
 {
     syslog(LOG_DEBUG, "CallParkMenu::getParkedCallDetails(\"%s\")", park_exten.c_str());
 
@@ -149,7 +149,7 @@ std::string HTTPParkButton::httpPushButton(std::string const &park_exten) const
     return createMessageXML(false, 10, "Parked Call Detail", message);
 }
 
-std::string HTTPParkButton::displayErrorMessage(std::string const &title, std::string const &text) const
+std::string ParkButton::displayErrorMessage(std::string const &title, std::string const &text) const
 {
-    return HTTPParkButton::createMessageXML(true, 5, title, text);
+    return ParkButton::createMessageXML(true, 5, title, text);
 }

@@ -1,17 +1,17 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef UI_PHONE_UI_STATE_HPP
-#define UI_PHONE_UI_STATE_HPP
+#ifndef BRIDGE_PHONE_UI_STATE_HPP
+#define BRIDGE_PHONE_UI_STATE_HPP
 
 #include <mutex>
 #include <pugixml.hpp>
 #include <string>
 
-namespace ui {
+namespace bridge {
 
 /// @class PhoneUIState
-/// @namespace ui
+/// @namespace bridge
 ///
 /// @brief Object contains the current state for deskphone UI.
 ///

@@ -32,7 +32,7 @@ void PJSIPWizardConfig::process(lambda_t const &lambda)
     action["Filename"] = "pjsip_wizard.conf";
     if (auto const reaction = io_conn_->invoke(action); reaction->isSuccess()) {
         reaction->forEach([&lambda](cpp_ami::event::Event const &event) mutable -> bool {
-            // Iterate over AoR records, collecting all variables for use
+            // Iterate over AoR records, invoking lambda on each record
             for (auto const &aor_rec : loadJSON(event["JSON"])) {
                 lambda(aor_rec.second);
             }

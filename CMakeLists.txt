@@ -91,11 +91,15 @@ target_sources(lamp_monitor
     src/asterisk/RegisterEventHandler.cpp
     src/asterisk/NightEventHandler.cpp
     src/asterisk/ParkEventHandler.cpp
-    src/bridge/yealink/HttpParkButton.cpp
-    src/bridge/yealink/HttpNightButton.cpp
+    src/bridge/yealink/ParkButton.cpp
+    src/bridge/yealink/NightButton.cpp
     src/bridge/yealink/PhoneUi.cpp
-    src/bridge/yealink/HttpPhonebook.cpp
-    src/bridge/snom/HttpPhonebook.cpp
+    src/phonebook/yealink/HttpPhonebook.cpp
+    src/phonebook/snom/HttpPhonebook.cpp
+    src/bridge/NightButton.cpp
+    src/bridge/ParkButton.cpp
+    src/bridge/PhoneUi.cpp
+    src/bridge/PhoneUiState.cpp
     src/button_state/ButtonPlan.cpp
     src/button_state/PhoneButton.cpp
     src/cache/DeskphoneCache.cpp
@@ -103,12 +107,8 @@ target_sources(lamp_monitor
     src/phonebook/Adapter.cpp
     src/phonebook/HttpPhonebook.cpp
     src/phonebook/adapter/PjsipWizardAdapter.cpp
-    src/ui/PhoneEventDispatcher.cpp
+    src/bridge/PhoneEventDispatcher.cpp
     src/ConfigFileParser.cpp
-    src/ui/HttpNightButton.cpp
-    src/ui/HttpParkButton.cpp
-    src/ui/PhoneUi.cpp
-    src/ui/PhoneUiState.cpp
     src/main.cpp
 )
 

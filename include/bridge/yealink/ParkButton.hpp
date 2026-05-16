@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef BRIDGE_YEALINK_HTTP_PARK_BUTTON_HPP
-#define BRIDGE_YEALINK_HTTP_PARK_BUTTON_HPP
+#ifndef BRIDGE_YEALINK_PARK_BUTTON_HPP
+#define BRIDGE_YEALINK_PARK_BUTTON_HPP
 
-#include "ui/HttpParkButton.hpp"
+#include "bridge/ParkButton.hpp"
 
 #include <c++ami/Connection.hpp>
 #include <memory>
@@ -12,19 +12,19 @@
 
 namespace bridge::yealink {
 
-/// @class HTTPParkButton
+/// @class ParkButton
 /// @namespace bridge::yealink
 ///
-/// @brief This class will create a call park menu for Yealink IP deskphones.
+/// @brief This class provides a call park button bridge from the phone to the application.
 ///
-/// This object can interact with the Asterisk server and return a list of parked phone calls that can be retrieved from
-/// parking using XML compatible with Yealink Android based deskphones. Objects can also create screens to view the
-/// details of parked calls.
-class HTTPParkButton : public ui::HTTPParkButton {
+/// This object will interact with the Asterisk server and return a list of parked phone calls that can be retrieved
+/// from parking using XML compatible with Yealink Android based deskphones. This object can also create screens to view
+/// the details of parked calls.
+class ParkButton : public bridge::ParkButton {
 public:
-    explicit HTTPParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
-                          std::string parked_call_info_uri);
-    ~HTTPParkButton() override = default;
+    explicit ParkButton(std::shared_ptr<cpp_ami::Connection> io_conn, std::string parking_lot,
+                        std::string parked_call_info_uri);
+    ~ParkButton() override = default;
 
     /// @brief Creates an XML browser string containing a YealinkIPPhoneTextScreen body to display on a deskphone.
     ///
@@ -40,7 +40,7 @@ public:
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
     ///
     /// @return XML browser string to be displayed by a Yealink IP deskphone.
-    std::string httpPushButton() const override;
+    std::string pushButton() const override;
 
     /// @brief Creates an XML string containing Yealink XML browser text to display on a deskphone.
     ///
@@ -49,7 +49,7 @@ public:
     /// @return XML browser string to be displayed on a Yealink IP deskphone.
     ///
     /// This function will create an XML browser string containing details of the call parked at \c park_exten.
-    std::string httpPushButton(std::string const &park_exten) const override;
+    std::string pushButton(std::string const &park_exten) const override;
 
     /// @brief Displays an error message on the desktop phone.
     ///
@@ -88,6 +88,6 @@ private:
     std::string parked_call_info_uri_;             ///< URI for parked call info.
 };
 
-} // namespace xml::yealink
+} // namespace bridge::yealink
 
 #endif

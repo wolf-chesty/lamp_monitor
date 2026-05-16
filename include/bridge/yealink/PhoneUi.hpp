@@ -4,8 +4,8 @@
 #ifndef BRIDGE_YEALINK_PHONE_UI_HPP
 #define BRIDGE_YEALINK_PHONE_UI_HPP
 
-#include "ui/HttpStateButton.hpp"
-#include "ui/PhoneUi.hpp"
+#include "bridge/HttpStateButton.hpp"
+#include "bridge/PhoneUi.hpp"
 
 namespace bridge::yealink {
 
@@ -14,8 +14,8 @@ namespace bridge::yealink {
 ///
 /// @brief Class generates XML browser code for Yealink deskphones.
 class PhoneUI
-    : public ui::HTTPStateButton
-    , public ui::PhoneUI {
+    : public bridge::HTTPStateButton
+    , public bridge::PhoneUI {
 public:
     explicit PhoneUI(std::string name);
     ~PhoneUI() override = default;
@@ -25,7 +25,7 @@ public:
     /// @param config Configuration parametrs for this object.
     ///
     /// @return Pointer to new object.
-    static std::pair<std::string, std::shared_ptr<ui::PhoneUI>> create(YAML::Node const &config);
+    static std::pair<std::string, std::shared_ptr<bridge::PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Populates \c action with PJSIP notification text compatible with Yealink deskphones.
     ///

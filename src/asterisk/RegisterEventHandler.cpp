@@ -45,7 +45,7 @@ std::shared_ptr<button_state::ButtonPlan> RegisterEventHandler::getButtonPlan(st
     return itr != button_plans_.end() ? itr->second : nullptr;
 }
 
-std::shared_ptr<ui::PhoneUI> RegisterEventHandler::getPhoneUI(std::string const &plan_name, std::string const &ui_name)
+std::shared_ptr<bridge::PhoneUI> RegisterEventHandler::getPhoneUI(std::string const &plan_name, std::string const &ui_name)
 {
     if (auto const plan = getButtonPlan(plan_name)) {
         return plan->getPhoneUI(ui_name);
@@ -91,7 +91,7 @@ void RegisterEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &even
     }
 }
 
-void RegisterEventHandler::publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_ui)
+void RegisterEventHandler::publishPhoneState(std::string const &aor, std::shared_ptr<bridge::PhoneUI> const &phone_ui)
 {
     cpp_ami::action::PJSIPNotify action;
     action["Endpoint"] = aor;

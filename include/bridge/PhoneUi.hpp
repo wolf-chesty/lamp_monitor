@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef UI_PHONE_UI_HPP
-#define UI_PHONE_UI_HPP
+#ifndef BRIDGE_PHONE_UI_HPP
+#define BRIDGE_PHONE_UI_HPP
 
+#include "bridge/PhoneUiState.hpp"
 #include "button_state/PhoneButton.hpp"
-#include "PhoneUiState.hpp"
 #include <c++ami/action/PjsipNotify.hpp>
 #include <memory>
 #include <pugixml.hpp>
@@ -14,10 +14,10 @@
 #include <vector>
 #include <yaml-cpp/yaml.h>
 
-namespace ui {
+namespace bridge {
 
 /// @class PhoneUI
-/// @namespace ui
+/// @namespace bridge
 ///
 /// @brief Provides an interface for objects that can generate XML data specific to hardware deskphones.
 class PhoneUI {
@@ -29,7 +29,7 @@ public:
     ///
     /// @param config Configuration parameters.
     ///
-    /// @return Pointer to new object.
+    /// @return Pointer to new object and its name.
     static std::pair<std::string, std::shared_ptr<PhoneUI>> create(YAML::Node const &config);
 
     /// @brief Invoked whenever the button state for a lamp field is updated.
@@ -44,7 +44,7 @@ public:
 
     /// @brief Can be invoked by users of this object to get a string representation of the phones UI.
     ///
-    /// @return String that can set a deskphones appearance.
+    /// @return String that represents a deskphones appearance.
     std::string getStateString();
 
     /// @brief Indicates whether the phone state is critical and should be forced onto the phone.
@@ -55,7 +55,7 @@ public:
     /// @brief Invoked by users of this object to populate a PJSIP notification action that the deskphone will
     ///        recognize.
     ///
-    /// @param action PJSIP notification action to populate with deskphone specific data.
+    /// @param action PJSIP notification action to push the state to the phones.
     virtual void initialize(cpp_ami::action::PJSIPNotify &action) = 0;
 
 protected:
@@ -72,7 +72,8 @@ protected:
     /// @brief Creates the new phone UI state from the buttons states and initial critical state.
     ///
     /// @param button Button to create the new phone state XML from.
-    /// @param critical Overrides the initial critical state of the UI state.
+    /// @param critical Overrides the initial critical state of the UI. Setting this flag to \c true will force update
+    ///                 the phone UI.
     ///
     /// @return XML state and critical flag.
     virtual std::pair<pugi::xml_document, bool>
@@ -81,7 +82,8 @@ protected:
     /// @brief Creates the new phone UI state from the buttons states and initial critical state.
     ///
     /// @param buttons Buttons to create the new phone state XML from.
-    /// @param critical Overrides the initial critical state of the UI state.
+    /// @param critical Overrides the initial critical state of the UI. Setting this flag to \c true will force update
+    ///                 the phone UL.
     ///
     /// @return XML state and critical flag.
     virtual std::pair<pugi::xml_document, bool>

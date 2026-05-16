@@ -1,15 +1,15 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef AST_BRIDGE_REGISTER_EVENT_HANDLER_HPP
-#define AST_BRIDGE_REGISTER_EVENT_HANDLER_HPP
+#ifndef ASTERISK_REGISTER_EVENT_HANDLER_HPP
+#define ASTERISK_REGISTER_EVENT_HANDLER_HPP
 
 #include "asterisk/EventHandler.hpp"
 
+#include "bridge/PhoneEventDispatcher.hpp"
+#include "bridge/PhoneUi.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
-#include "ui/PhoneEventDispatcher.hpp"
-#include "ui/PhoneUi.hpp"
 #include <c++ami/util/KeyValDict.hpp>
 #include <memory>
 #include <string>
@@ -58,7 +58,7 @@ private:
     /// @param ui_name Phone UI renderer to retrieve from the button plan.
     ///
     /// @return Pointer to phone UI renderer.
-    std::shared_ptr<ui::PhoneUI> getPhoneUI(std::string const &plan_name, std::string const &ui_name);
+    std::shared_ptr<bridge::PhoneUI> getPhoneUI(std::string const &plan_name, std::string const &ui_name);
 
     /// @brief Handles AMI events coming from the Asterisk AMI server.
     ///
@@ -69,7 +69,7 @@ private:
     ///
     /// @param aor AOR to send state to.
     /// @param phone_ui Phone UI renderer.
-    void publishPhoneState(std::string const &aor, std::shared_ptr<ui::PhoneUI> const &phone_ui);
+    void publishPhoneState(std::string const &aor, std::shared_ptr<bridge::PhoneUI> const &phone_ui);
 
     std::shared_ptr<DeskphoneCache> deskphone_cache_;                                         ///< Deskphone cache.
     std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>> button_plans_; ///< Button plans for app.
