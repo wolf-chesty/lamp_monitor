@@ -51,6 +51,15 @@ public:
     std::string getParkingLot() const;
 
 private:
+    /// @brief Returns a collection of parking hints for the parking lot \c parking_lot.
+    ///
+    /// @conn Asterisk AMI connection.
+    /// @parking_lot Parking lot.
+    ///
+    /// @return Collection of parking hints.
+    static std::unordered_set<std::string> getParkingHints(std::shared_ptr<cpp_ami::Connection> const &conn,
+                                                          std::string const &parking_lot);
+
     /// @brief Invoked whenever there is a new AMI event from Asterisk.
     ///
     /// @param event Event that occurred on the Asterisk server.
@@ -63,6 +72,7 @@ private:
 
     std::string parking_lot_;                                   ///< Name of parking lot being monitored.
     std::weak_ptr<button_state::PhoneButton> phone_button_;     ///< Pointer to phone button state object.
+    std::unordered_set<std::string> parking_hints_;             ///< Parking hints for this parking event handler.
     std::unordered_set<std::string> parked_extens_;             ///< Collection of active parked extensions.
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Event callback ID.
 };

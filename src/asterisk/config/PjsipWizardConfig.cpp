@@ -15,28 +15,20 @@ PJSIPWizardConfig::PJSIPWizardConfig(std::shared_ptr<cpp_ami::Connection> io_con
     assert(io_conn_);
 }
 
-YAML::Node loadJSON(std::string const &json_str)
-{
-    try {
-        return YAML::Load(json_str);
-    }
-    catch (std::exception const &e) {
-        syslog(LOG_ERR, "Unable to parse pjsip_wizard.conf");
-    }
-    return YAML::Node();
-}
-
 void PJSIPWizardConfig::process(lambda_t const &lambda)
 {
     cpp_ami::action::GetConfigJSON action;
     action["Filename"] = "pjsip_wizard.conf";
-    if (auto const reaction = io_conn_->invoke(action); reaction->isSuccess()) {
-        reaction->forEach([&lambda](cpp_ami::event::Event const &event) mutable -> bool {
-            // Iterate over AoR records, invoking lambda on each record
-            for (auto const &aor_rec : loadJSON(event["JSON"])) {
-                lambda(aor_rec.second);
-            }
-            return true;
-        });
+    auto const reaction = io_conn_->invoke(action);
+    if (!reaction->isSuccess()) {
+        return;
     }
+
+    reaction->forEach([&lambda](cpp_ami::event::Event const &event) mutable -> bool {
+        // Iterate over AoR records, invoking lambda on each record
+        for (auto const &aor_rec : YAML::Load(event["JSON"])) {
+            lambda(aor_rec.second);
+        }
+        return true;
+    });
 }

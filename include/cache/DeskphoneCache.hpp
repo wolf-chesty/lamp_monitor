@@ -37,7 +37,6 @@ protected:
         std::string aor;      ///< AOR of record.
         std::string endpoint; ///< Endpoint details of AOR object.
         int64_t expiry;       ///< Expiry timestamp of AOR record.
-
     };
 
 public:

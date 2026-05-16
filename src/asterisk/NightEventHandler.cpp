@@ -20,7 +20,7 @@ NightEventHandler::NightEventHandler(std::weak_ptr<button_state::PhoneButton> ph
         io_conn->addCallback([this](cpp_ami::util::KeyValDict const &event) -> void { amiEventHandler(event); });
 
     // Asterisk will return a list of ExtensionStatus events upon receiving an ExtensionStateList action. Just have
-    // Asterisk send the list so this objects event handler can take care of the event(s).
+    // Asterisk send the list to this objects event handler can take care of the event(s).
     cpp_ami::action::ExtensionStateList const action;
     io_conn->asyncInvoke(action);
 }

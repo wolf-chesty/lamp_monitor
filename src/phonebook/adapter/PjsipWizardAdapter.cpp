@@ -3,7 +3,6 @@
 
 #include "phonebook/adapter/PjsipWizardAdapter.hpp"
 
-#include <c++ami/action/GetConfigJson.hpp>
 #include <regex>
 #include <syslog.h>
 #include <yaml-cpp/yaml.h>

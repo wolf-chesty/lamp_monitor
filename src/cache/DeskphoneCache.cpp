@@ -70,9 +70,8 @@ void DeskphoneCache::initializeDatabase()
 
     connection.exec("CREATE TABLE IF NOT EXISTS phone_uis ("
                     "aor TEXT NOT NULL,"
-                    " button_plan TEXT NOT NULL,"
-                    " phone_type TEXT NOT NULL,"
-                    " PRIMARY KEY(aor)"
+                    " ui TEXT NOT NULL,"
+                    " PRIMARY KEY(aor, ui)"
                     ");");
     connection.exec("DELETE FROM phone_uis;");
 }
