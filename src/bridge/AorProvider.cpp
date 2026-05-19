@@ -14,5 +14,6 @@ std::shared_ptr<AoRProvider> AoRProvider::create(YAML::Node const &config, std::
     if (type == "pjsip_wizard_cfg") {
         return bridge::provider::PJSIPWizardProvider::create(config, conn);
     }
+    assert(false);
     return nullptr;
 }

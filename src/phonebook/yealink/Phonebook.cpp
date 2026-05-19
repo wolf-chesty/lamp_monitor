@@ -14,14 +14,6 @@ Phonebook::Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_ada
 {
 }
 
-std::shared_ptr<phonebook::Phonebook> Phonebook::create(YAML::Node const &config,
-                                                        std::shared_ptr<phonebook::PhonebookProvider> const &adapter)
-{
-    assert(config["type"].as<std::string>() == "yealink");
-    std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
-    return std::make_shared<Phonebook>(adapter, expiry);
-}
-
 std::string Phonebook::getContentType()
 {
     return "text/xml";

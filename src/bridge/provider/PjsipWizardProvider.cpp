@@ -30,7 +30,6 @@ std::unordered_set<std::string> PJSIPWizardProvider::getCompatibleAoRs()
         if (!matcher_.isMatch(aor_cfg_json)) {
             return;
         }
-
         auto const &endpoint_auth_json =aor_cfg_json["endpoint/auth"];
         if (!endpoint_auth_json) {
             syslog(LOG_WARNING, "Missing endpoint/auth");

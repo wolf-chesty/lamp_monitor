@@ -14,12 +14,6 @@ PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter)
 {
 }
 
-std::shared_ptr<bridge::PhoneUI> PhoneUI::create(YAML::Node const &config,
-                                                 std::shared_ptr<bridge::AoRProvider> const &adapter)
-{
-    return std::make_shared<PhoneUI>(config["name"].as<std::string>(), adapter);
-}
-
 void PhoneUI::initialize(cpp_ami::action::PJSIPNotify &action)
 {
     action.setValues("Variable", {"Event=Yealink-xml", "Content-Type=application/xml",

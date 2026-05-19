@@ -18,12 +18,12 @@ Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_adapter, std::
 
 std::shared_ptr<Phonebook> Phonebook::create(YAML::Node const &config, std::shared_ptr<PhonebookProvider> const &source)
 {
-    auto const &type = config["type"].as<std::string>();
-    if (type == "snom") {
-        return phonebook::snom::Phonebook::create(config, source);
+    std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
+    if (auto const &type = config["type"].as<std::string>(); type == "snom") {
+        return std::make_shared<phonebook::snom::Phonebook>(source, expiry);
     }
     else if (type == "yealink") {
-        return phonebook::yealink::Phonebook::create(config, source);
+        return std::make_shared<phonebook::yealink::Phonebook>(source, expiry);
     }
 
     assert(false);

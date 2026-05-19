@@ -19,7 +19,6 @@ namespace bridge {
 /// menu on the phone display.
 class ParkButton {
 public:
-    ParkButton() = default;
     virtual ~ParkButton() = default;
 
     /// @brief Creates a phone park button object for the phone of type \c type.

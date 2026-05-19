@@ -17,13 +17,6 @@ public:
     explicit Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry);
     ~Phonebook() override = default;
 
-    /// @brief Creates a new object using parameters from \c config.
-    ///
-    /// @param config Configuration options.
-    /// @param adapter Pointer to datasource adapter.
-    static std::shared_ptr<phonebook::Phonebook> create(YAML::Node const &config,
-                                                            std::shared_ptr<phonebook::PhonebookProvider> const &adapter);
-
     /// @brief Returns the HTTP content type for text created by this object.
     ///
     /// @return HTTP content type for text created by this object.

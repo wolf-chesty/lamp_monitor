@@ -30,7 +30,6 @@ public:
     };
 
 public:
-    PhonebookProvider() = default;
     virtual ~PhonebookProvider() = default;
 
     /// @brief Factory function that will create the appropriate adapter object specified in \c config.

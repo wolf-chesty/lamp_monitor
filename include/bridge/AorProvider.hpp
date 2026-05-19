@@ -16,7 +16,6 @@ namespace bridge {
 /// @brief Objects of this type return AoR's that are compatible with a phone UI object.
 class AoRProvider {
 public:
-    AoRProvider() = default;
     virtual ~AoRProvider() = default;
 
     /// @brief Factory function that will create the appropriate adapter object specified in \c config.

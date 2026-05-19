@@ -10,16 +10,16 @@
 
 using namespace bridge;
 
-PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter)
+PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> provider)
     : name_(std::move(name))
-    , adapter_(std::move(adapter))
+    , provider_(std::move(provider))
 {
     assert(!name_.empty());
-    assert(adapter_ != nullptr);
+    assert(provider_ != nullptr);
 
     syslog(LOG_DEBUG, "PhoneUI::PhoneUI()");
 
-    setAoRs(adapter_->getCompatibleAoRs());
+    setAoRs(provider_->getCompatibleAoRs());
 }
 
 PhoneUI::~PhoneUI()
@@ -29,12 +29,10 @@ PhoneUI::~PhoneUI()
 
 std::shared_ptr<PhoneUI> PhoneUI::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
+    auto const name = config["name"].as<std::string>();
     auto const adapter = bridge::AoRProvider::create(config["adapter"], io_conn);
-    assert(adapter != nullptr);
-
-    auto const &type = config["type"].as<std::string>();
-    if (type == "yealink") {
-        return bridge::yealink::PhoneUI::create(config, adapter);
+    if (auto const &type = config["type"].as<std::string>(); type == "yealink") {
+        return std::make_shared<bridge::yealink::PhoneUI>(name, adapter);
     }
 
     assert(false);
