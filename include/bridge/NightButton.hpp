@@ -16,7 +16,7 @@ namespace bridge {
 /// @class NightButton
 /// @namespace bridge
 ///
-/// @brief This object provides a night button bridge from the phone to the application.
+/// @brief Objects of this type provide a night button bridge from the phone to the application.
 ///
 /// This object is responsible for updating the night button device, changing the systems night state. After delegating
 /// the state change to the Asterisk system it will return the expected button state to the user of this object.
@@ -26,7 +26,7 @@ public:
                          std::shared_ptr<cpp_ami::Connection> io_conn, std::string device);
     virtual ~NightButton() = default;
 
-    /// @brief Creates a phone HTTP night button object for the phone of type \c type.
+    /// @brief Creates a phone night button object for the phone of type \c type.
     ///
     /// @param type Type of deskphone.
     /// @param button Application phone button state.

@@ -5,14 +5,14 @@
 
 #include "asterisk/NightEventHandler.hpp"
 #include "asterisk/ParkEventHandler.hpp"
-#include "bridge/HttpStateButton.hpp"
+#include "bridge/HTTPStateProvider.hpp"
 #include "bridge/NightButton.hpp"
 #include "bridge/ParkButton.hpp"
-#include "bridge/PhoneEventDispatcher.hpp"
+#include "bridge/PhoneStateDispatcher.hpp"
 #include "bridge/PhoneUi.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
-#include "phonebook/HttpPhonebook.hpp"
+#include "phonebook/Phonebook.hpp"
 #include <c++ami/action/Login.hpp>
 #include <errno.h>
 #include <grp.h>
@@ -117,16 +117,16 @@ std::tuple<std::unique_ptr<httplib::Server>, std::string, uint16_t> createHTTPSe
 void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
                       std::shared_ptr<cpp_ami::Connection> const &conn)
 {
-    std::unordered_map<std::string, std::shared_ptr<phonebook::Adapter>> adapters;
+    std::unordered_map<std::string, std::shared_ptr<phonebook::PhonebookProvider>> adapters;
     auto create_adapter = [&conn, &config,
-                           &adapters](std::string const &name) mutable -> std::shared_ptr<phonebook::Adapter> {
+                           &adapters](std::string const &name) mutable -> std::shared_ptr<phonebook::PhonebookProvider> {
         if (auto const itr = adapters.find(name); itr != adapters.end()) {
             return itr->second;
         }
 
         for (auto const adapter_yaml : config["adapters"]) {
             if (adapter_yaml["name"].as<std::string>() == name) {
-                auto adapter = phonebook::Adapter::create(adapter_yaml, conn);
+                auto adapter = phonebook::PhonebookProvider::create(adapter_yaml, conn);
                 adapters.emplace(name, adapter);
                 return adapter;
             }
@@ -146,7 +146,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
 
         // Create phonebook HTTP adapter
         auto const &phonebook_uri = phonebook_config["path"].as<std::string>();
-        auto const phonebook = phonebook::HTTPPhonebook::create(phonebook_config, adapter);
+        auto const phonebook = phonebook::Phonebook::create(phonebook_config, adapter);
         if (!phonebook) {
             syslog(LOG_ERR, "Failed creating HTTP phonebook for: %s", phonebook_uri.c_str());
             exit(EXIT_FAILURE);
@@ -232,13 +232,13 @@ void configureHTTPStateButton(YAML::Node const &config, httplib::Server &http_se
                               std::shared_ptr<bridge::PhoneUI> const &ui)
 {
     auto const uri = config["path"].as<std::string>();
-    auto const http_button = std::dynamic_pointer_cast<bridge::HTTPStateButton>(ui);
+    auto const http_button = std::dynamic_pointer_cast<bridge::HTTPStateProvider>(ui);
     if (!http_button) {
         syslog(LOG_WARNING, "Unable to configure phone state URI %s", uri.c_str());
         return;
     }
     http_server.Get(uri, [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-        res.set_content(http_button->httpPushButton(), http_button->getContentType());
+        res.set_content(http_button->getHTTPState(), http_button->getContentType());
     });
 }
 
@@ -352,7 +352,7 @@ void configureHTTPButton(std::string const &phone_type, YAML::Node const &config
 /// @return Button plan name, button plan pair.
 std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
     createPhonePlans(YAML::Node const &config, httplib::Server &http_server,
-                     std::shared_ptr<bridge::PhoneEventDispatcher> const &ami_bridge,
+                     std::shared_ptr<bridge::PhoneStateDispatcher> const &ami_bridge,
                      std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     // Lambda to create button plan
@@ -378,6 +378,7 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
     auto const http_url = config["http"]["url"].as<std::string>();
 
     // Create button plans for existing phones
+    std::unordered_set<std::string> phone_uis;
     std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>> button_plans;
     for (auto const &phone_cfg : config["phones"]) {
         auto const &plan_name = phone_cfg["button_plan"].as<std::string>();
@@ -396,8 +397,12 @@ std::unordered_map<std::string, std::shared_ptr<button_state::ButtonPlan>>
         assert(success);
 
         // Create phone UI and add it as a renderer for the button plan
-        auto const [ui_name, ui] = bridge::PhoneUI::create(phone_cfg);
-        success = button_plan->registerUI(ui_name, ui);
+        auto const ui = bridge::PhoneUI::create(phone_cfg, io_conn);
+        if (auto [itr, added] = phone_uis.emplace(ui->getName()); !added) {
+            syslog(LOG_ERR, "Found duplicate phone name %s", ui->getName().c_str());
+            exit(EXIT_FAILURE);
+        }
+        success = button_plan->registerUI(ui);
         assert(success);
 
         // Configure HTTP buttons for the phone
@@ -414,12 +419,12 @@ std::shared_ptr<asterisk::RegisterEventHandler>
                                std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     auto const phone_cache = createDeskphoneCache(config["database"], http_server);
-    auto const ami_bridge = std::make_shared<bridge::PhoneEventDispatcher>(conn, phone_cache);
+    auto const ami_bridge = std::make_shared<bridge::PhoneStateDispatcher>(conn, phone_cache);
     auto const phone_plans = createPhonePlans(config, http_server, ami_bridge, conn);
 
     auto event_handler = std::make_shared<asterisk::RegisterEventHandler>(phone_cache, conn);
-    for (auto const &[name, plan] : phone_plans) {
-        event_handler->addButtonPlan(name, plan);
+    for (auto const &[_, plan] : phone_plans) {
+        event_handler->registerButtonPlan(plan);
     }
     return event_handler;
 }

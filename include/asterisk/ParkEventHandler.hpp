@@ -21,7 +21,7 @@ namespace asterisk {
 /// @brief Monitors the Asterisk server for parked call events.
 ///
 /// This object acts as an Asterisk to application state bridge. This object will inspect Asterisk AMI event messages
-/// for any state changes in the Asterisk servers parked call space. As calls leave or enter the parked call space, this
+/// for any state changes in the Asterisk servers parked call space. As calls leave/enter the parked call space, this
 /// object will delegate the state change to the application state button for parking.
 class ParkEventHandler : public EventHandler {
 public:

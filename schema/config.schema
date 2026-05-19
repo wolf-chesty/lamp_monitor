@@ -67,7 +67,8 @@ database:
 phonebooks:
   adapters:
     _mandatory: true
-    _type: phonebook-adapter[]
+    _type: derived[]
+    _base: named-adapter
     _doc: phonebook source adapter
   http_paths:
     _mandatory: true

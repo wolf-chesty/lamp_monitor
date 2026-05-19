@@ -10,10 +10,16 @@
 
 using namespace bridge;
 
-PhoneUI::PhoneUI(std::string name)
+PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter)
     : name_(std::move(name))
+    , adapter_(std::move(adapter))
 {
+    assert(!name_.empty());
+    assert(adapter_ != nullptr);
+
     syslog(LOG_DEBUG, "PhoneUI::PhoneUI()");
+
+    setAoRs(adapter_->getCompatibleAoRs());
 }
 
 PhoneUI::~PhoneUI()
@@ -21,14 +27,18 @@ PhoneUI::~PhoneUI()
     syslog(LOG_DEBUG, "PhoneUI::~PhoneUI()");
 }
 
-std::pair<std::string, std::shared_ptr<PhoneUI>> PhoneUI::create(YAML::Node const &config)
+std::shared_ptr<PhoneUI> PhoneUI::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
+    auto const adapter = bridge::AoRProvider::create(config["adapter"], io_conn);
+    assert(adapter != nullptr);
+
     auto const &type = config["type"].as<std::string>();
     if (type == "yealink") {
-        return bridge::yealink::PhoneUI::create(config);
+        return bridge::yealink::PhoneUI::create(config, adapter);
     }
+
     assert(false);
-    return std::make_pair("", nullptr);
+    return nullptr;
 }
 
 void PhoneUI::update(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons)
@@ -68,4 +78,23 @@ bool PhoneUI::isCritical()
 std::string PhoneUI::getName()
 {
     return name_;
+}
+
+bool PhoneUI::hasAoR(std::string const &aor)
+{
+    std::shared_lock const lock(compatible_aors_mut_);
+    return compatible_aors_.contains(aor);
+}
+
+std::vector<std::string> PhoneUI::getAoRs()
+{
+    std::shared_lock const lock(compatible_aors_mut_);
+    std::vector<std::string> aors(compatible_aors_.begin(), compatible_aors_.end());
+    return aors;
+}
+
+void PhoneUI::setAoRs(std::unordered_set<std::string> aors)
+{
+    std::lock_guard const lock(compatible_aors_mut_);
+    compatible_aors_ = std::move(aors);
 }

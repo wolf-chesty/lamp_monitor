@@ -1,0 +1,5 @@
+type:
+  _doc: adapter type
+  _mandatory: true
+  _options: [ 'pjsip_wizard_cfg' ]
+  _type: string

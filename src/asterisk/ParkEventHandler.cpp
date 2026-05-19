@@ -97,7 +97,7 @@ void ParkEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &event)
     if (!valid_events.contains(event_type.value())) {
         return;
     }
-    if (auto const itr = parking_hints_.find(event["Hint"]); itr == parking_hints_.end()) {
+    if (!parking_hints_.contains(event["Hint"])) {
         return;
     }
 
@@ -129,6 +129,7 @@ std::unordered_set<std::string> ParkEventHandler::getParkingHints(std::shared_pt
     action["Filename"] = "res_parking.conf";
     auto const response = conn->invoke(action);
     if (!response->isSuccess()) {
+        syslog(LOG_WARNING, "Unable to read res_parking.conf");
         return std::unordered_set<std::string>();
     }
 
@@ -153,7 +154,7 @@ std::unordered_set<std::string> ParkEventHandler::getParkingHints(std::shared_pt
         for (auto pos = start_pos; pos <= end_pos; ++pos) {
             auto const hint = fmt::format("park:{}@{}", pos, context);
             syslog(LOG_DEBUG, "Adding hint %s to %s", hint.c_str(), parking_lot.c_str());
-            parking_hints.emplace();
+            parking_hints.emplace(hint);
         }
 
         return true;

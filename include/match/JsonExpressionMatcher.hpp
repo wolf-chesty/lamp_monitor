@@ -12,13 +12,11 @@
 
 namespace match {
 
-///
 /// @tparam T Numeric type.
 /// @class JSONExpressionMatcher
 /// @namespace match
 ///
 /// @brief Class that evaluates a JSON document against a matching expression.
-///
 template<Numeric T> class JSONExpressionMatcher {
 public:
     using symbol_table_t = exprtk::symbol_table<T>;
@@ -26,7 +24,7 @@ public:
     using parser_t = exprtk::parser<T>;
 
 public:
-    JSONExpressionMatcher(std::string match, SymbolMap::symbol_map_t symbol_map)
+    explicit JSONExpressionMatcher(std::string match, SymbolMap symbol_map)
         : match_(std::move(match))
         , symbol_map_(std::move(symbol_map))
     {

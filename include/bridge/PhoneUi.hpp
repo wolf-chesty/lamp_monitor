@@ -4,12 +4,15 @@
 #ifndef BRIDGE_PHONE_UI_HPP
 #define BRIDGE_PHONE_UI_HPP
 
+#include "bridge/AorProvider.hpp"
 #include "bridge/PhoneUiState.hpp"
 #include "button_state/PhoneButton.hpp"
+#include "c++ami/Connection.hpp"
 #include <c++ami/action/PjsipNotify.hpp>
 #include <memory>
 #include <pugixml.hpp>
 #include <shared_mutex>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <yaml-cpp/yaml.h>
@@ -19,10 +22,10 @@ namespace bridge {
 /// @class PhoneUI
 /// @namespace bridge
 ///
-/// @brief Provides an interface for objects that can generate XML data specific to hardware deskphones.
+/// @brief Provides an interface for objects that can generate XML data to control the UI of hardware deskphones.
 class PhoneUI {
 public:
-    PhoneUI(std::string name);
+    PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter);
     virtual ~PhoneUI();
 
     /// @brief Creates a new object using parameters in \c config.
@@ -30,7 +33,8 @@ public:
     /// @param config Configuration parameters.
     ///
     /// @return Pointer to new object and its name.
-    static std::pair<std::string, std::shared_ptr<PhoneUI>> create(YAML::Node const &config);
+    static std::shared_ptr<PhoneUI> create(YAML::Node const &config,
+                                           std::shared_ptr<cpp_ami::Connection> const &io_conn);
 
     /// @brief Invoked whenever the button state for a lamp field is updated.
     ///
@@ -57,6 +61,23 @@ public:
     ///
     /// @param action PJSIP notification action to push the state to the phones.
     virtual void initialize(cpp_ami::action::PJSIPNotify &action) = 0;
+
+    /// @brief Returns \c true if this phone UI is compatible with AoR \c aor.
+    ///
+    /// @param aor AoR to check.
+    ///
+    /// @return \c true if this phone UI is compatible with AoR \c aor.
+    bool hasAoR(std::string const &aor);
+
+    /// @brief Returns collection of compatible AoR's for this object.
+    ///
+    /// @return Collection of AoR's compatible with this object.
+    std::vector<std::string> getAoRs();
+
+    /// @brief Sets list of compatible AoR's for this object.
+    ///
+    /// @param aors Collection of compatible AoR's.
+    void setAoRs(std::unordered_set<std::string> aors);
 
 protected:
     /// @brief Provides an atomic operation to return the current cached phone state.
@@ -91,10 +112,13 @@ protected:
 
 private:
     std::string name_;                                  ///< Name for the phone UL.
+    std::shared_ptr<bridge::AoRProvider> adapter_;          ///< Pointer to adapter that loads the AoRs.
     std::shared_ptr<PhoneUIState> cached_button_state_; ///< Current phone UI state.
     std::shared_mutex cached_button_state_mut_;         ///< Mutex on phone UI state.
+    std::unordered_set<std::string> compatible_aors_;   ///< List of compatible AoRs.
+    std::shared_mutex compatible_aors_mut_;             ///< Mutex on \c compatible_aors_.
 };
 
-} // namespace ui
+} // namespace bridge
 
 #endif

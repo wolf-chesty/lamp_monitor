@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef PHONEBOOK_ADAPTER_JSON_UNKNOWN_SYMBOL_RESOLVER_HPP
-#define PHONEBOOK_ADAPTER_JSON_UNKNOWN_SYMBOL_RESOLVER_HPP
+#ifndef MATCH_JSON_UNKNOWN_SYMBOL_RESOLVER_HPP
+#define MATCH_JSON_UNKNOWN_SYMBOL_RESOLVER_HPP
 
 #include "match/SymbolMap.hpp"
 #include <exprtk.hpp>
@@ -15,7 +15,6 @@ namespace match {
 template<typename T>
 concept Numeric = std::same_as<T, float> || std::same_as<T, double>;
 
-///
 /// @tparam T
 /// @class JSONUnknownSymbolResolver
 /// @namespace match
@@ -25,15 +24,14 @@ concept Numeric = std::same_as<T, float> || std::same_as<T, double>;
 /// The match equations used to identify items in the software are specified by the end user. Since the user creates
 /// these matching statements the symbols aren't known to the application. This class allows for the application to
 /// determine the symbols in the equation at runtime.
-///
 template<Numeric T> class JSONUnknownSymbolResolver : public exprtk::parser<T>::unknown_symbol_resolver {
 public:
     using symbol_table_t = exprtk::symbol_table<T>;
     using usr_t = exprtk::parser<T>::unknown_symbol_resolver;
 
 public:
-    JSONUnknownSymbolResolver(YAML::Node const &node, SymbolMap const &symbol_map,
-                              std::unordered_map<std::string, std::string> &string_table)
+    explicit JSONUnknownSymbolResolver(YAML::Node const &node, SymbolMap const &symbol_map,
+                                       std::unordered_map<std::string, std::string> &string_table)
         : usr_t(usr_t::e_usrmode_extended)
         , node_(node)
         , symbol_map_(symbol_map)
@@ -76,6 +74,6 @@ private:
     std::unordered_map<std::string, std::string> &string_table_; ///< Table of string vals.
 };
 
-} // namespace phonebook::adapter
+} // namespace match
 
 #endif

@@ -9,17 +9,17 @@
 
 using namespace button_state;
 
-ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneEventDispatcher> ami_bridge)
+ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneStateDispatcher> dispatcher)
     : name_(std::move(name))
-    , ami_bridge_(std::move(ami_bridge))
+    , phone_state_dispatcher_(std::move(dispatcher))
 {
 }
 
 std::shared_ptr<ButtonPlan> ButtonPlan::create(YAML::Node const &config,
-                                               std::shared_ptr<bridge::PhoneEventDispatcher> const &ami_bridge)
+                                               std::shared_ptr<bridge::PhoneStateDispatcher> const &dispatcher)
 {
     auto const &name = config["name"].as<std::string>();
-    auto const button_plan = std::make_shared<ButtonPlan>(name, ami_bridge);
+    auto const button_plan = std::make_shared<ButtonPlan>(name, dispatcher);
 
     for (auto const &button_cfg : config["buttons"]) {
         auto const button = PhoneButton::create(button_cfg, button_plan);
@@ -63,38 +63,36 @@ void ButtonPlan::invalidate([[maybe_unused]] uint16_t const button_id)
 
     std::shared_lock const lock(phone_uis_mut_);
     std::for_each(std::execution::par, phone_uis_.begin(), phone_uis_.end(),
-                  [this, buttons = getButtons()](auto const &itr) -> void {
-                      auto const ui = itr.second;
+                  [this, buttons = getButtons()](auto const &ui) -> void {
                       // Update the UI state
                       ui->update(buttons);
                       // Publish the UI state to the physical deskphones
                       cpp_ami::action::PJSIPNotify action;
                       ui->initialize(action);
-                      ami_bridge_->dispatch(action);
+                      phone_state_dispatcher_->dispatch(ui->getAoRs(), action);
                   });
 }
 
-bool ButtonPlan::registerUI(std::string const &ui_name, std::shared_ptr<bridge::PhoneUI> const &ui)
+bool ButtonPlan::registerUI(std::shared_ptr<bridge::PhoneUI> const &ui)
 {
     std::lock_guard const lock(phone_uis_mut_);
-    auto const &[itr, success] = phone_uis_.emplace(ui_name, ui);
+    auto const &[itr, success] = phone_uis_.emplace(ui);
     if (success) {
         ui->update(getButtons());
     }
     return success;
 }
 
-void ButtonPlan::unregisterUI(std::string const &ui_name)
+std::vector<std::shared_ptr<bridge::PhoneUI>> ButtonPlan::getPhoneUIs(std::string const &aor)
 {
+    std::vector<std::shared_ptr<bridge::PhoneUI>> phone_uis;
     std::lock_guard const lock(phone_uis_mut_);
-    phone_uis_.erase(ui_name);
-}
-
-std::shared_ptr<bridge::PhoneUI> ButtonPlan::getPhoneUI(std::string const &ui_type)
-{
-    std::shared_lock const lock(phone_uis_mut_);
-    auto const itr = phone_uis_.find(ui_type);
-    return itr != phone_uis_.end() ? itr->second : nullptr;
+    for (auto const &phone_ui : phone_uis_) {
+        if (phone_ui->hasAoR(aor)) {
+            phone_uis.emplace_back(phone_ui);
+        }
+    }
+    return phone_uis;
 }
 
 bool ButtonPlan::addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button)
@@ -102,8 +100,8 @@ bool ButtonPlan::addButton(uint16_t const button_id, std::shared_ptr<PhoneButton
     std::lock_guard const lock(buttons_mut_);
     auto const [_, success] = buttons_.emplace(button_id, button);
     if (!success) {
-        assert(success);
         syslog(LOG_WARNING, "Unable to add button %ud to plan '%s'", button_id, name_.c_str());
+        assert(success);
     }
     return success;
 }

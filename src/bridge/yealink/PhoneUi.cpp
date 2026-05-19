@@ -9,15 +9,15 @@
 
 using namespace bridge::yealink;
 
-PhoneUI::PhoneUI(std::string name)
-    : bridge::PhoneUI(std::move(name))
+PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter)
+    : bridge::PhoneUI(std::move(name), std::move(adapter))
 {
 }
 
-std::pair<std::string, std::shared_ptr<bridge::PhoneUI>> PhoneUI::create(YAML::Node const &config)
+std::shared_ptr<bridge::PhoneUI> PhoneUI::create(YAML::Node const &config,
+                                                 std::shared_ptr<bridge::AoRProvider> const &adapter)
 {
-    auto const ui = std::make_shared<PhoneUI>(config["name"].as<std::string>());
-    return std::make_pair(ui->getName(), ui);
+    return std::make_shared<PhoneUI>(config["name"].as<std::string>(), adapter);
 }
 
 void PhoneUI::initialize(cpp_ami::action::PJSIPNotify &action)
@@ -26,7 +26,7 @@ void PhoneUI::initialize(cpp_ami::action::PJSIPNotify &action)
                                   fmt::format("Content={}", cpp_ami::util::KeyValDict::escape(getStateString()))});
 }
 
-std::string PhoneUI::httpPushButton()
+std::string PhoneUI::getHTTPState()
 {
     return getStateString();
 }
@@ -43,21 +43,17 @@ char const *PhoneUI::toColorString(button_state::PhoneButton::Color const color)
     static constexpr char const *const BUTTON_COLOR_GREEN = "GREEN";
     static constexpr char const *const BUTTON_COLOR_BLUE = "BLUE";
 
-    char const *button_color;
     switch (color) {
     case button_state::PhoneButton::Color::Red:
-        button_color = BUTTON_COLOR_RED;
-        break;
+        return BUTTON_COLOR_RED;
     case button_state::PhoneButton::Color::Green:
-        button_color = BUTTON_COLOR_GREEN;
-        break;
+        return BUTTON_COLOR_GREEN;
     case button_state::PhoneButton::Color::Blue:
-        button_color = BUTTON_COLOR_BLUE;
-        break;
+        return BUTTON_COLOR_BLUE;
     default:
         assert(false);
     }
-    return button_color;
+    return BUTTON_COLOR_RED;
 }
 
 char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button)
@@ -67,21 +63,19 @@ char const *PhoneUI::toButtonStateString(button_state::PhoneButton const &button
     static constexpr char const *const BUTTON_STATE_FLASH_SLOW = "slowflash";
     static constexpr char const *const BUTTON_STATE_FLASH_FAST = "fastflash";
 
-    char const *button_state = BUTTON_STATE_OFF;
     if (button.isOn()) {
         switch (button.getFlashMode()) {
         case button_state::PhoneButton::FlashMode::Off:
-            button_state = BUTTON_STATE_ON;
-            break;
+            return BUTTON_STATE_ON;
         case button_state::PhoneButton::FlashMode::Fast:
-            button_state = BUTTON_STATE_FLASH_FAST;
-            break;
+            return BUTTON_STATE_FLASH_FAST;
         case button_state::PhoneButton::FlashMode::Slow:
-            button_state = BUTTON_STATE_FLASH_SLOW;
-            break;
+            return BUTTON_STATE_FLASH_SLOW;
+        default:
+            assert(false);
         }
     }
-    return button_state;
+    return BUTTON_STATE_OFF;
 }
 
 std::pair<pugi::xml_document, bool>

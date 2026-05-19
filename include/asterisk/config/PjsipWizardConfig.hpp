@@ -10,6 +10,10 @@
 
 namespace asterisk::config {
 
+/// @class PJSIPWizardConfig
+/// @namespace asterisk::config
+///
+/// @brief Provides an interfaces to the Asterisk pjsip_wizard.conf configuration file.
 class PJSIPWizardConfig {
 public:
     using lambda_t = std::function<void(YAML::Node const &)>;
@@ -18,10 +22,13 @@ public:
     explicit PJSIPWizardConfig(std::shared_ptr<cpp_ami::Connection> io_conn);
     ~PJSIPWizardConfig() = default;
 
+    /// @brief Invokes lambda on each element in the configuration file.
+    ///
+    /// @param lambda Function to invoke on each element in the configuration file.
     void process(lambda_t const &lambda);
 
 private:
-    std::shared_ptr<cpp_ami::Connection> io_conn_;
+    std::shared_ptr<cpp_ami::Connection> io_conn_; ///< Asterisk AMI connection.
 };
 
 } // namespace asterisk::config

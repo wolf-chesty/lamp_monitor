@@ -30,27 +30,10 @@ EventHandler::EventType RegisterEventHandler::getType() const
     return EventType::Register;
 }
 
-bool RegisterEventHandler::addButtonPlan(std::string const &name,
-                                         std::shared_ptr<button_state::ButtonPlan> const &button_plan)
+void RegisterEventHandler::registerButtonPlan(std::shared_ptr<button_state::ButtonPlan> const &button_plan)
 {
     std::lock_guard const lock(button_plans_mut_);
-    auto const [_, success] = button_plans_.emplace(name, button_plan);
-    return success;
-}
-
-std::shared_ptr<button_state::ButtonPlan> RegisterEventHandler::getButtonPlan(std::string const &name)
-{
-    std::shared_lock const lock(button_plans_mut_);
-    auto const itr = button_plans_.find(name);
-    return itr != button_plans_.end() ? itr->second : nullptr;
-}
-
-std::shared_ptr<bridge::PhoneUI> RegisterEventHandler::getPhoneUI(std::string const &plan_name, std::string const &ui_name)
-{
-    if (auto const plan = getButtonPlan(plan_name)) {
-        return plan->getPhoneUI(ui_name);
-    }
-    return nullptr;
+    button_plans_.emplace_back(button_plan);
 }
 
 /// This callback is invoked for every AMI event that is published by the Asterisk server. This callback will process
@@ -68,36 +51,36 @@ void RegisterEventHandler::amiEventHandler(cpp_ami::util::KeyValDict const &even
     if (!valid_events.contains(event_type.value())) {
         return;
     }
-    if (event["Service"] != "PJSIP") {
+    static std::unordered_set<std::string> const valid_services{"PJSIP"};
+    if (!valid_services.contains(event["Service"])) {
         return;
     }
 
-    // Our site currently only has one phone, the Yealink T88W's. Need away to determine which group the phone belong to
-    // and the phones UI type.
-    auto const phone_ui = getPhoneUI("default", "yealink-t88w");
-    if (!phone_ui) {
-        return;
-    }
-
-    // Grab deskphone adapter; the phone adapter knows how to render the screens for this particular endpoint.
     auto const &aor = event["AccountID"];
-
-    // Some phones (like Android based Yealink deskphones) will wake the screen whenever they receive a PJSIP notify
-    // message. This can cause wear on the backlight mechanism of the deskphone. Make sure to only publish the phone
-    // state if the phone wasn't present for the previous lamp state change or the state requires the screen to be
-    // turned on (i.e., in order to catch the users attention).
-    if (deskphone_cache_->addEndpoint(aor, event["RemoteAddress"]) || phone_ui->isCritical()) {
-        publishPhoneState(aor, phone_ui);
-    }
+    publishPhoneState(deskphone_cache_->addEndpoint(aor, event["RemoteAddress"]), aor);
 }
 
-void RegisterEventHandler::publishPhoneState(std::string const &aor, std::shared_ptr<bridge::PhoneUI> const &phone_ui)
+void RegisterEventHandler::publishPhoneState(bool const new_aor, std::string const &aor)
 {
-    cpp_ami::action::PJSIPNotify action;
-    action["Endpoint"] = aor;
-    assert(phone_ui);
-    phone_ui->initialize(action);
-
+    std::lock_guard const lock(button_plans_mut_);
     auto const io_conn = getConnection();
-    io_conn->asyncInvoke(action);
+    for (auto const &button_plan : button_plans_) {
+        for (auto const &phone_ui : button_plan->getPhoneUIs(aor)) {
+            // Some phones (like Android based Yealink deskphones) will wake the screen whenever they receive a PJSIP
+            // notify message. This can cause wear on the backlight mechanism of the deskphone. Make sure to only
+            // publish the phone state if the phone wasn't present for the previous lamp state change or the screen is
+            // required to be shown.
+            if (!new_aor && !phone_ui->isCritical()) {
+                continue;
+            }
+
+            // Construct PJSIP notify action
+            cpp_ami::action::PJSIPNotify action;
+            action["Endpoint"] = aor;
+            assert(phone_ui);
+            phone_ui->initialize(action);
+            // Send PJSIP notify action to Asterisk server
+            io_conn->asyncInvoke(action);
+        }
+    }
 }

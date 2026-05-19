@@ -1,15 +1,15 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#ifndef PHONEBOOK_ADAPTER_SYMBOL_MAP_HPP
-#define PHONEBOOK_ADAPTER_SYMBOL_MAP_HPP
+#ifndef MATCH_SYMBOL_MAP_HPP
+#define MATCH_SYMBOL_MAP_HPP
 
 #include <string>
 #include <unordered_map>
+#include <yaml-cpp/yaml.h>
 
 namespace match {
 
-///
 /// @class SymbolMap
 /// @namespace match
 ///
@@ -18,13 +18,19 @@ namespace match {
 /// \c exprtk doesn't allow certain characters in variable names. This class maps \c exprtk compatible symbol names to
 /// their actual symbol names in structures like YAML, which can contain characters like forward-slash (/) which is
 /// incompatible with \c exprtk.
-///
 class SymbolMap {
 public:
     using symbol_map_t = std::unordered_map<std::string, std::string>;
 
 public:
     explicit SymbolMap(std::unordered_map<std::string, std::string> symbol_map);
+
+    /// @brief Creates a new symbol map object from the YAML config data.
+    ///
+    /// @param config Configuration data.
+    ///
+    /// @return New symbol map object.
+    static SymbolMap create(YAML::Node const &config);
 
     /// @brief This function will return a YAML key that is mapped to \c symbol.
     ///

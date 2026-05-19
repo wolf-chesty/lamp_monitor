@@ -1,9 +1,0 @@
-type:
-  _mandatory: true
-  _type: string
-  _options: [ "wizard" ]
-  _doc: phone adapter type
-context:
-  _mandatory: $type == 'wizard'
-  _type: string
-  _doc: filter for phone

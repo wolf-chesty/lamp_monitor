@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Christopher L Walker
 // SPDX-License-Identifier: MIT
 
-#include "phonebook/yealink/HttpPhonebook.hpp"
+#include "phonebook/yealink/Phonebook.hpp"
 
 #include <cassert>
 #include <pugixml.hpp>
@@ -9,25 +9,25 @@
 
 using namespace phonebook::yealink;
 
-HTTPPhonebook::HTTPPhonebook(std::shared_ptr<phonebook::Adapter> phonebook_adapter, std::chrono::minutes expiry)
-    : phonebook::HTTPPhonebook(std::move(phonebook_adapter), std::move(expiry))
+Phonebook::Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry)
+    : phonebook::Phonebook(std::move(phonebook_adapter), std::move(expiry))
 {
 }
 
-std::shared_ptr<phonebook::HTTPPhonebook> HTTPPhonebook::create(YAML::Node const &config,
-                                                               std::shared_ptr<phonebook::Adapter> const &adapter)
+std::shared_ptr<phonebook::Phonebook> Phonebook::create(YAML::Node const &config,
+                                                        std::shared_ptr<phonebook::PhonebookProvider> const &adapter)
 {
     assert(config["type"].as<std::string>() == "yealink");
     std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
-    return std::make_shared<HTTPPhonebook>(adapter, expiry);
+    return std::make_shared<Phonebook>(adapter, expiry);
 }
 
-std::string HTTPPhonebook::getContentType()
+std::string Phonebook::getContentType()
 {
     return "text/xml";
 }
 
-std::string HTTPPhonebook::getPhonebookImpl()
+std::string Phonebook::getPhonebook(std::shared_ptr<PhonebookProvider> const &phonebook_source)
 {
     // Create XML document
     pugi::xml_document xml_doc;
@@ -37,8 +37,7 @@ std::string HTTPPhonebook::getPhonebookImpl()
 
     auto phonebook_xml = xml_doc.append_child("YealinkIPPhoneDirectory");
 
-    auto const phonebook_adapter = getPhonebookAdapter();
-    for (auto const &phonebook_detail : phonebook_adapter->getPhonebookDetails()) {
+    for (auto const &phonebook_detail : phonebook_source->getCallerDetails()) {
         auto dir_entry_xml = phonebook_xml.append_child("DirectoryEntry");
         // Add name
         auto name_xml = dir_entry_xml.append_child("Name");

@@ -26,7 +26,8 @@ void PJSIPWizardConfig::process(lambda_t const &lambda)
 
     reaction->forEach([&lambda](cpp_ami::event::Event const &event) mutable -> bool {
         // Iterate over AoR records, invoking lambda on each record
-        for (auto const &aor_rec : YAML::Load(event["JSON"])) {
+        auto const &json = event["JSON"];
+        for (auto const &aor_rec : YAML::Load(json)) {
             lambda(aor_rec.second);
         }
         return true;

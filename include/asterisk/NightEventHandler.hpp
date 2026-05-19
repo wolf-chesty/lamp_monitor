@@ -57,7 +57,7 @@ private:
     void amiEventHandler(cpp_ami::util::KeyValDict const &event);
 
     std::weak_ptr<button_state::PhoneButton> phone_button_;     ///< Pointer to phone button state.
-    std::string hint_;                                        ///< Device name of the night button.
+    std::string hint_;                                          ///< Device name of the night button.
     cpp_ami::Connection::event_callback_key_t ami_callback_id_; ///< Asterisk AMI callback ID.
 };
 

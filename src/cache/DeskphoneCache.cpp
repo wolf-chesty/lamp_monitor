@@ -67,13 +67,6 @@ void DeskphoneCache::initializeDatabase()
     // Database may contain old AOR endpoints that haven't expired from the cache yet. Expire these endpoints so that
     // initial lamp updates work.
     connection.exec("UPDATE endpoints SET expiry = 0;");
-
-    connection.exec("CREATE TABLE IF NOT EXISTS phone_uis ("
-                    "aor TEXT NOT NULL,"
-                    " ui TEXT NOT NULL,"
-                    " PRIMARY KEY(aor, ui)"
-                    ");");
-    connection.exec("DELETE FROM phone_uis;");
 }
 
 /// Adds a deskphone to the table of active deskphones on the SIP network.

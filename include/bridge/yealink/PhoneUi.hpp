@@ -4,7 +4,7 @@
 #ifndef BRIDGE_YEALINK_PHONE_UI_HPP
 #define BRIDGE_YEALINK_PHONE_UI_HPP
 
-#include "bridge/HttpStateButton.hpp"
+#include "bridge/HTTPStateProvider.hpp"
 #include "bridge/PhoneUi.hpp"
 
 namespace bridge::yealink {
@@ -14,18 +14,20 @@ namespace bridge::yealink {
 ///
 /// @brief Class generates XML browser code for Yealink deskphones.
 class PhoneUI
-    : public bridge::HTTPStateButton
+    : public bridge::HTTPStateProvider
     , public bridge::PhoneUI {
 public:
-    explicit PhoneUI(std::string name);
+    explicit PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter);
     ~PhoneUI() override = default;
 
     /// @brief Creates a new object of this type using parameters from \c config.
     ///
     /// @param config Configuration parametrs for this object.
+    /// @param adapter Adapter used to pull compatible AoRs.
     ///
     /// @return Pointer to new object.
-    static std::pair<std::string, std::shared_ptr<bridge::PhoneUI>> create(YAML::Node const &config);
+    static std::shared_ptr<bridge::PhoneUI> create(YAML::Node const &config,
+                                                   std::shared_ptr<bridge::AoRProvider> const &adapter);
 
     /// @brief Populates \c action with PJSIP notification text compatible with Yealink deskphones.
     ///
@@ -35,7 +37,7 @@ public:
     /// @brief Pushes the HTTP button, returning HTTP body with result.
     ///
     /// @return HTTP result body.
-    std::string httpPushButton() override;
+    std::string getHTTPState() override;
 
     /// @brief Returns the HTTP content type for text created by this object.
     ///
@@ -110,6 +112,6 @@ private:
         createYealinkXML(std::vector<std::shared_ptr<button_state::PhoneButton>> const &buttons, bool critical);
 };
 
-} // namespace xml::yealink
+} // namespace bridge::yealink
 
 #endif
