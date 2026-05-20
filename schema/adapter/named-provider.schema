@@ -1,9 +1,9 @@
 type:
-  _doc: adapter type
+  _doc: provider type
   _mandatory: true
   _options: [ 'pjsip_wizard_cfg' ]
   _type: string
 name:
-  _doc: adapter name
+  _doc: provider name
   _mandatory: true
   _type: string

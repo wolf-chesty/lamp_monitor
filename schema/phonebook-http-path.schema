@@ -2,10 +2,10 @@ path:
   _mandatory: true
   _type: string
   _doc: phonebook HTTP path
-adapter:
+provider:
   _mandatory: true
   _type: string
-  _doc: name of phonebook adapter
+  _doc: name of phonebook provider
 type:
   _mandatory: false
   _type: string

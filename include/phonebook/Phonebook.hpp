@@ -23,7 +23,7 @@ public:
     using clock_t = std::chrono::steady_clock;
 
 public:
-    explicit Phonebook(std::shared_ptr<PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry);
+    explicit Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider, std::chrono::minutes expiry);
     virtual ~Phonebook() = default;
 
     /// @brief Creates a new object using parameters specified in \c config.
@@ -52,11 +52,11 @@ protected:
     virtual std::string getPhonebook(std::shared_ptr<PhonebookProvider> const &phonebook_source) = 0;
 
 private:
-    std::shared_ptr<PhonebookProvider> phonebook_source_; ///< Pointer to source phonebook adapter.
-    clock_t::time_point timestamp_{};                     ///< Timestamp for last time XML data was created.
-    std::chrono::minutes expiry_;                         ///< How long XML phonebooks should be considered valid.
-    std::string cached_phonebook_;                        ///< Cached XML browser phonebook data.
-    std::mutex cached_phonebook_mut_;                     ///< Mutex to control phonebook creation.
+    std::shared_ptr<PhonebookProvider> provider_; ///< Pointer to source phonebook adapter.
+    clock_t::time_point timestamp_{};             ///< Timestamp for last time XML data was created.
+    std::chrono::minutes expiry_;                 ///< How long XML phonebooks should be considered valid.
+    std::string cached_phonebook_;                ///< Cached XML browser phonebook data.
+    std::mutex cached_phonebook_mut_;             ///< Mutex to control phonebook creation.
 };
 
 } // namespace phonebook

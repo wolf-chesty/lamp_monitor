@@ -124,7 +124,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
             return itr->second;
         }
 
-        for (auto const adapter_yaml : config["adapters"]) {
+        for (auto const adapter_yaml : config["providers"]) {
             if (adapter_yaml["name"].as<std::string>() == name) {
                 auto adapter = phonebook::PhonebookProvider::create(adapter_yaml, conn);
                 adapters.emplace(name, adapter);
@@ -137,7 +137,7 @@ void createPhonebooks(YAML::Node const &config, httplib::Server &http_server,
 
     for (auto const &phonebook_config : config["http_paths"]) {
         // Create phonebook source adapter
-        auto const &adapter_id = phonebook_config["adapter"].as<std::string>();
+        auto const &adapter_id = phonebook_config["provider"].as<std::string>();
         auto const adapter = create_adapter(adapter_id);
         if (!adapter) {
             syslog(LOG_ERR, "Missing phonebook source adapter: %s", adapter_id.c_str());

@@ -1,6 +1,5 @@
 syslog:
-  level: 7
-  #level: 3
+  level: 3
   console: true
 
 http:
@@ -15,33 +14,40 @@ ami:
   secret: secret
 
 database:
-  filename: /tmp/phone_cache.sqlite3
+  filename: /tmp/cache.sqlite3
   expiry: 120
   http_paths:
     expire_path: /expire
-    register_path: /register
 
 phonebooks:
-  adapters:
-    - type: wizard
-      name: default
-      filter: local-phone
+  providers:
+    - name: default
+      type: pjsip_wizard_cfg
+      match: ec == 'local-set'
+      symbol_maps:
+        - symbol: ec
+          key: endpoint/context
 
   http_paths:
-    - path: /phonebook
-      adapter: default
+    - path: /yealink/phonebook
+      provider: default
       type: yealink
-      expiry: 60
+      ttl: 60
+
+    - path: /snom/phonebook
+      provider: default
+      type: snom
+      ttl: 60
 
 button_plans:
-  - name: default
+  - name: yealink-t88w
     buttons:
       - id: 1
         label: Night
         color: red
         critical_on: false
         critical_off: false
-        flash: solid
+        flash: off
         type: night_button
         hint: Custom:night
 
@@ -55,20 +61,30 @@ button_plans:
         parking_lot: default
       
 phones:
-  - name: yealink_t88w
+  - name: yealink-t88w
     type: yealink
-    button_plan: default
+    button_plan: yealink-t88w
+
+    provider:
+      type: pjsip_wizard_cfg
+      match: pp == 'yealink' and ec = 'local-set'
+      symbol_maps:
+        - symbol: ec
+          key: endpoint/context
+
+        - symbol: pp
+          key: phoneprov/PROFILE
 
     http_paths:
       - type: http_state
-        path: /blf_state
+        path: /yealink/blf_state
 
       - type: http_night
         button_id: 1
-        path: /reset_night
+        path: /yealink/reset_night
 
       - type: http_park
         button_id: 2
-        park_list_path: /parked_call_list
-        park_info_path: /parked_call_info
+        park_list_path: /yealink/parked_call_list
+        park_info_path: /yealink/parked_call_info
 

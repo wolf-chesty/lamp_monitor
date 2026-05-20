@@ -9,8 +9,8 @@
 
 using namespace bridge::yealink;
 
-PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> adapter)
-    : bridge::PhoneUI(std::move(name), std::move(adapter))
+PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> provider)
+    : bridge::PhoneUI(std::move(name), std::move(provider))
 {
 }
 

@@ -9,8 +9,8 @@
 
 using namespace phonebook::yealink;
 
-Phonebook::Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry)
-    : phonebook::Phonebook(std::move(phonebook_adapter), std::move(expiry))
+Phonebook::Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_provider, std::chrono::minutes expiry)
+    : phonebook::Phonebook(std::move(phonebook_provider), std::move(expiry))
 {
 }
 

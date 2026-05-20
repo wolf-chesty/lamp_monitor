@@ -30,9 +30,9 @@ PhoneUI::~PhoneUI()
 std::shared_ptr<PhoneUI> PhoneUI::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     auto const name = config["name"].as<std::string>();
-    auto const adapter = bridge::AoRProvider::create(config["adapter"], io_conn);
+    auto const provider = bridge::AoRProvider::create(config["provider"], io_conn);
     if (auto const &type = config["type"].as<std::string>(); type == "yealink") {
-        return std::make_shared<bridge::yealink::PhoneUI>(name, adapter);
+        return std::make_shared<bridge::yealink::PhoneUI>(name, provider);
     }
 
     assert(false);

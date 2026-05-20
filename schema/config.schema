@@ -65,11 +65,11 @@ database:
       _doc: HTTP path to manually expire active deskphones from the cache
 
 phonebooks:
-  adapters:
+  providers:
     _mandatory: true
     _type: derived[]
-    _base: named-adapter
-    _doc: phonebook source adapter
+    _base: named-provider
+    _doc: phonebook source provider
   http_paths:
     _mandatory: true
     _type: phonebook-http-path[]

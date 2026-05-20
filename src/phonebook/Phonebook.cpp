@@ -10,8 +10,8 @@
 
 using namespace phonebook;
 
-Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry)
-    : phonebook_source_(std::move(phonebook_adapter))
+Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider, std::chrono::minutes expiry)
+    : provider_(std::move(phonebook_provider))
     , expiry_(std::move(expiry))
 {
 }
@@ -38,7 +38,7 @@ std::string Phonebook::getPhonebook()
 
     // Phonebook string still valid?
     if (timestamp_ < clock_t::now()) {
-        cached_phonebook_ = getPhonebook(phonebook_source_);
+        cached_phonebook_ = getPhonebook(provider_);
         timestamp_ = clock_t::now() + expiry_;
     }
     return cached_phonebook_;

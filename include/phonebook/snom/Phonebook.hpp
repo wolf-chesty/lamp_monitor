@@ -14,7 +14,7 @@ namespace phonebook::snom {
 /// @brief Creates XML browser phonebook compatible with display on Snom IP deskphones.
 class Phonebook : public phonebook::Phonebook {
 public:
-    explicit Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_adapter, std::chrono::minutes expiry);
+    explicit Phonebook(std::shared_ptr<phonebook::PhonebookProvider> phonebook_provider, std::chrono::minutes expiry);
     ~Phonebook() override = default;
 
     /// @brief Returns the HTTP content type for text created by this object.

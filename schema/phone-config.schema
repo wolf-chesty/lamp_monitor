@@ -11,11 +11,11 @@ button_plan:
   _mandatory: true
   _type: string
   _doc: button plan name
-adapter:
+provider:
   _mandatory: true
   _type: derived
-  _base: adapter
-  _doc: phone adapter
+  _base: provider
+  _doc: phone provider
 http_paths:
   _mandatory: false
   _type: derived[]

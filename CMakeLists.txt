@@ -3,7 +3,7 @@ cmake_policy(VERSION 3.12)
 
 set(CMAKE_CXX_STANDARD 20)
 
-project(lamp_monitor VERSION 0.0.0.0 LANGUAGES CXX C)
+project(lamp_monitor VERSION 0.1.0.0 LANGUAGES CXX C)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Options
