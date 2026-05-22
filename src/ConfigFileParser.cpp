@@ -71,14 +71,45 @@ void setUserGroup(std::string const &user, std::string const &group)
     }
 }
 
+/// @brief Returns numeric representation of config file log level string.
+///
+/// @param log_level String log level value.
+///
+/// @return Log level int value.
+int toLogLevel(std::string const &log_level)
+{
+    if (log_level == "DEBUG") {
+        return LOG_DEBUG;
+    }
+    else if (log_level == "INFO") {
+        return LOG_INFO;
+    }
+    else if (log_level == "NOTICE") {
+        return LOG_NOTICE;
+    }
+    else if (log_level == "WARNING") {
+        return LOG_WARNING;
+    }
+    else if (log_level == "ERR") {
+        return LOG_ERR;
+    }
+    else if (log_level == "CRIT") {
+        return LOG_CRIT;
+    }
+    else if (log_level == "ALERT") {
+        return LOG_ALERT;
+    }
+    return LOG_EMERG;
+}
+
 void configureSyslog(YAML::Node const &config, std::string_view app_name, bool const is_daemon)
 {
     int options = 0;
     options |= (!is_daemon && config["console"].as<bool>() ? LOG_CONS : 0);
     openlog(app_name.data(), options, LOG_USER);
 
-    auto const log_level = config["level"].as<int>();
-    setlogmask(LOG_UPTO(log_level));
+    auto const log_level = config["level"].as<std::string>();
+    setlogmask(LOG_UPTO(toLogLevel(log_level)));
 }
 
 std::shared_ptr<cpp_ami::Connection> createAMIConnection(YAML::Node const &config, std::string_view filter)

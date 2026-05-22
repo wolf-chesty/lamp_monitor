@@ -1,9 +1,9 @@
 syslog:
   level:
     _mandatory: false
-    _type: unsigned int
-    _options: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
-    _default: 3
+    _type: string
+    _options: [ EMERG, ALERT, CRIT, ERR, WARNING, NOTICE, INFO, DEBUG ]
+    _default: ERR
     _doc: syslog logging level
   console:
     _mandatory: false
