@@ -20,6 +20,7 @@ option(LAMP_MONITOR_UNIT_TESTS "Build unit tests" ON)
 # Project dependencies
 # ----------------------------------------------------------------------------------------------------------------------
 find_package(fmt 12.1.0 REQUIRED)
+find_package(Git REQUIRED)
 find_package(pugixml 1.15 REQUIRED)
 find_package(yaml-cpp 0.7 REQUIRED)
 
@@ -45,6 +46,13 @@ elseif (LAMP_MONITOR_SANITIZE_THREAD)
     set(CPPAMI_SANITIZE_THREAD ON)
     set(DBPOOL_SANITIZE_THREAD ON)
 endif ()
+
+execute_process (
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH_SHORT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Project definition
