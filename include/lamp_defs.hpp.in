@@ -1,0 +1,12 @@
+// Copyright (c) 2026 Christopher L Walker
+// SPDX-License-Identifier: MIT
+
+#ifndef LAMP_DEFS_HPP
+#define LAMP_DEFS_HPP
+
+#include <string>
+
+static std::string const LAMP_MONITOR_VER{"${LAMP_MONITOR_NAME} v${LAMP_MONITOR_VERSION}"};
+static std::string const SCHEMA_DIR{"${LAMP_MONITOR_SCHEMA_DIR}"};
+
+#endif

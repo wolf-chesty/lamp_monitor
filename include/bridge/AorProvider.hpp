@@ -24,7 +24,7 @@ public:
     /// @param conn Pointer to AMI Asterisk connection.
     ///
     /// @return Pointer to new object.
-    static std::shared_ptr<AoRProvider> create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn);
+    static std::unique_ptr<AoRProvider> create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn);
 
     /// @brief Returns a collection of compatible AoRs.
     ///

@@ -4,6 +4,7 @@
 #include "button_state/PhoneButton.hpp"
 
 #include "button_state/ButtonPlan.hpp"
+#include <cassert>
 #include <syslog.h>
 
 using namespace button_state;

@@ -25,7 +25,7 @@ namespace bridge {
 /// @brief Provides an interface for objects that can generate XML data to control the UI of hardware deskphones.
 class PhoneUI {
 public:
-    explicit PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> provider);
+    explicit PhoneUI(std::string name, std::unique_ptr<bridge::AoRProvider> provider);
     virtual ~PhoneUI();
 
     /// @brief Creates a new object using parameters in \c config.
@@ -112,7 +112,7 @@ protected:
 
 private:
     std::string name_;                                  ///< Name for the phone UL.
-    std::shared_ptr<bridge::AoRProvider> provider_;          ///< Pointer to adapter that loads the AoRs.
+    std::unique_ptr<bridge::AoRProvider> provider_;     ///< Pointer to adapter that loads the AoRs.
     std::shared_ptr<PhoneUIState> cached_button_state_; ///< Current phone UI state.
     std::shared_mutex cached_button_state_mut_;         ///< Mutex on phone UI state.
     std::unordered_set<std::string> compatible_aors_;   ///< List of compatible AoRs.

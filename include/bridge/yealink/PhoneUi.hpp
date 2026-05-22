@@ -17,7 +17,7 @@ class PhoneUI
     : public bridge::HTTPStateProvider
     , public bridge::PhoneUI {
 public:
-    explicit PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> provider);
+    explicit PhoneUI(std::string name, std::unique_ptr<bridge::AoRProvider> provider);
     ~PhoneUI() override = default;
 
     /// @brief Populates \c action with PJSIP notification text compatible with Yealink deskphones.

@@ -9,17 +9,17 @@
 
 using namespace button_state;
 
-ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneStateDispatcher> dispatcher)
+ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<cpp_ami::Connection> io_conn)
     : name_(std::move(name))
-    , phone_state_dispatcher_(std::move(dispatcher))
+    , io_conn_(std::move(io_conn))
 {
 }
 
 std::shared_ptr<ButtonPlan> ButtonPlan::create(YAML::Node const &config,
-                                               std::shared_ptr<bridge::PhoneStateDispatcher> const &dispatcher)
+                                               std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     auto const &name = config["name"].as<std::string>();
-    auto const button_plan = std::make_shared<ButtonPlan>(name, dispatcher);
+    auto const button_plan = std::make_shared<ButtonPlan>(name, io_conn);
 
     for (auto const &button_cfg : config["buttons"]) {
         auto const button = PhoneButton::create(button_cfg, button_plan);
@@ -69,7 +69,10 @@ void ButtonPlan::invalidate([[maybe_unused]] uint16_t const button_id)
                       // Publish the UI state to the physical deskphones
                       cpp_ami::action::PJSIPNotify action;
                       ui->initialize(action);
-                      phone_state_dispatcher_->dispatch(ui->getAoRs(), action);
+                      for (auto const &aor : ui->getAoRs()) {
+                          action["Endpoint"] = aor;
+                          io_conn_->asyncInvoke(action);
+                      }
                   });
 }
 

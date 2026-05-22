@@ -17,11 +17,11 @@ namespace bridge::provider {
 class PJSIPWizardProvider : public bridge::AoRProvider {
 public:
     explicit PJSIPWizardProvider(std::shared_ptr<cpp_ami::Connection> io_conn, std::string match,
-                                match::SymbolMap symbol_map);
+                                 match::SymbolMap symbol_map);
     ~PJSIPWizardProvider() override = default;
 
-    static std::shared_ptr<PJSIPWizardProvider> create(YAML::Node const &config,
-                                                      std::shared_ptr<cpp_ami::Connection> const &conn);
+    static std::unique_ptr<PJSIPWizardProvider> create(YAML::Node const &config,
+                                                       std::shared_ptr<cpp_ami::Connection> const &conn);
 
     std::unordered_set<std::string> getCompatibleAoRs() override;
 
@@ -30,6 +30,6 @@ private:
     match::JSONExpressionMatcher<double> matcher_; ///< JSON matcher.
 };
 
-} // namespace bridge::adapter
+} // namespace bridge::provider
 
 #endif

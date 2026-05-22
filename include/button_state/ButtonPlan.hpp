@@ -5,9 +5,9 @@
 #define BUTTON_STATE_BUTTON_PLAN_HPP
 
 #include "asterisk/EventHandler.hpp"
-#include "bridge/PhoneStateDispatcher.hpp"
 #include "bridge/PhoneUi.hpp"
 #include "button_state/PhoneButton.hpp"
+#include <c++ami/Connection.hpp>
 #include <memory>
 #include <shared_mutex>
 #include <unordered_map>
@@ -30,17 +30,16 @@ namespace button_state {
 /// render the current deskphone button state and send that information to each phone on the network.
 class ButtonPlan {
 public:
-    explicit ButtonPlan(std::string name, std::shared_ptr<bridge::PhoneStateDispatcher> dispatcher);
+    explicit ButtonPlan(std::string name, std::shared_ptr<cpp_ami::Connection> io_conn);
     ~ButtonPlan() = default;
 
     /// @brief Creates a new object using configuration paramters from \c config.
     ///
     /// @param config Configuration parameters for object.
-    /// @param dispatcher Pointer to object that pushes phone state to deskphones.
     ///
     /// @return Pointer to new object.
     static std::shared_ptr<ButtonPlan> create(YAML::Node const &config,
-                                              std::shared_ptr<bridge::PhoneStateDispatcher> const &dispatcher);
+                                              std::shared_ptr<cpp_ami::Connection> const &io_conn);
 
     /// @brief Returns the name of the object.
     ///
@@ -107,12 +106,12 @@ public:
     std::shared_ptr<asterisk::EventHandler> getEventHandler(uint16_t const id);
 
 private:
-    std::string name_;                                                     ///< Plan name.
-    std::shared_ptr<bridge::PhoneStateDispatcher> phone_state_dispatcher_; ///< Bridge to deskphones.
-    std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_;   ///< Collection of observed buttons.
-    std::shared_mutex buttons_mut_;                                        ///< Mutex on button collection.
-    std::unordered_set<std::shared_ptr<bridge::PhoneUI>> phone_uis_;       ///< Phone UI's to render this object.
-    std::shared_mutex phone_uis_mut_;                                      ///< Mutex on phone UI collection.
+    std::string name_;                                                   ///< Plan name.
+    std::shared_ptr<cpp_ami::Connection> io_conn_;                       ///< Connection to Asterisk AMI server.
+    std::unordered_map<uint16_t, std::shared_ptr<PhoneButton>> buttons_; ///< Collection of observed buttons.
+    std::shared_mutex buttons_mut_;                                      ///< Mutex on button collection.
+    std::unordered_set<std::shared_ptr<bridge::PhoneUI>> phone_uis_;     ///< Phone UI's to render this object.
+    std::shared_mutex phone_uis_mut_;                                    ///< Mutex on phone UI collection.
     std::unordered_map<uint16_t, std::shared_ptr<asterisk::EventHandler>>
         event_handlers_; ///< Collection of event handlers that can change button states managed by this object.
     std::shared_mutex event_handlers_mut_; ///< Mutex on \c event_handlers_.

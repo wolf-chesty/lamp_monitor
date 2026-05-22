@@ -10,7 +10,7 @@
 
 using namespace bridge;
 
-PhoneUI::PhoneUI(std::string name, std::shared_ptr<bridge::AoRProvider> provider)
+PhoneUI::PhoneUI(std::string name, std::unique_ptr<bridge::AoRProvider> provider)
     : name_(std::move(name))
     , provider_(std::move(provider))
 {
@@ -30,9 +30,9 @@ PhoneUI::~PhoneUI()
 std::shared_ptr<PhoneUI> PhoneUI::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &io_conn)
 {
     auto const name = config["name"].as<std::string>();
-    auto const provider = bridge::AoRProvider::create(config["provider"], io_conn);
+    auto provider = bridge::AoRProvider::create(config["provider"], io_conn);
     if (auto const &type = config["type"].as<std::string>(); type == "yealink") {
-        return std::make_shared<bridge::yealink::PhoneUI>(name, provider);
+        return std::make_shared<bridge::yealink::PhoneUI>(name, std::move(provider));
     }
 
     assert(false);

@@ -8,7 +8,7 @@
 
 using namespace bridge;
 
-std::shared_ptr<AoRProvider> AoRProvider::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn)
+std::unique_ptr<AoRProvider> AoRProvider::create(YAML::Node const &config, std::shared_ptr<cpp_ami::Connection> const &conn)
 {
     auto const &type = config["type"].as<std::string>();
     if (type == "pjsip_wizard_cfg") {

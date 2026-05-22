@@ -5,6 +5,7 @@
 #include "asterisk/RegisterEventHandler.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "ConfigFileParser.hpp"
+#include "lamp_defs.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
     try {
         // Load config file
         auto const config_yaml = loadConfigFile(args.config_file);
-        //auto const config_yaml = YAML::LoadFile(args.config_file);
+        // auto const config_yaml = YAML::LoadFile(args.config_file);
 
         // Fork to background if requested
         if (args.is_daemon) {
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
 /// @return Application parameters structure.
 ApplicationParameters getApplicationParameters(int argc, char *argv[])
 {
-    argparse::ArgumentParser parser("lamp_monitor");
+    argparse::ArgumentParser parser("lamp_monitor", LAMP_MONITOR_VER);
     parser.add_argument("-d", "--daemon")
         .help("run application as a daemon")
         .default_value(false)

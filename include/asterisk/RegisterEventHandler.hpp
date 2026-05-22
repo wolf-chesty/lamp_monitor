@@ -6,7 +6,6 @@
 
 #include "asterisk/EventHandler.hpp"
 
-#include "bridge/PhoneStateDispatcher.hpp"
 #include "bridge/PhoneUi.hpp"
 #include "button_state/ButtonPlan.hpp"
 #include "cache/DeskphoneCache.hpp"
