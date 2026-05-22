@@ -6,7 +6,7 @@
 
 #include <string>
 
-static std::string const LAMP_MONITOR_VER{"${LAMP_MONITOR_NAME} v${LAMP_MONITOR_VERSION}"};
+static std::string const LAMP_MONITOR_VER{"${LAMP_MONITOR_NAME} v${LAMP_MONITOR_VERSION} (${GIT_HASH_SHORT})"};
 static std::string const SCHEMA_DIR{"${LAMP_MONITOR_SCHEMA_DIR}"};
 
 #endif
