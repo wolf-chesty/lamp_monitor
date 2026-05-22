@@ -1,0 +1,8 @@
+match:
+  _doc: filter for wizard type phone
+  _mandatory: true
+  _type: string
+symbol_maps:
+  _doc: map of symbols to YAML keys
+  _mandatory: false
+  _type: symbol-map[]

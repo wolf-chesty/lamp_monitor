@@ -2,15 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "ApplicationParameters.hpp"
-#include "button_state/LampField.hpp"
-#include "monitor/Deskphone.hpp"
-#include "monitor/NightButton.hpp"
-#include "monitor/ParkButton.hpp"
-#include "xml/yealink/PhoneUi.hpp"
-#include "phonebook/PjsipWizardAdapter.hpp"
-#include "xml/yealink/CallParkMenu.hpp"
-#include "xml/yealink/HttpNightButton.hpp"
-#include "xml/yealink/XmlPhonebook.hpp"
+#include "asterisk/RegisterEventHandler.hpp"
+#include "button_state/ButtonPlan.hpp"
+#include "ConfigFileParser.hpp"
+#include "lamp_defs.hpp"
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <c++ami/action/Login.hpp>
@@ -19,53 +14,15 @@
 #include <c++ami/Connection.hpp>
 #include <filesystem>
 #include <httplib.h>
-#include <inicpp.h>
 #include <memory>
 #include <string_view>
+#include <syslog.h>
 #include <unistd.h>
-
-// Function declarations ===============================================================================================
-
-void signalHandler(int signum);
-
-ApplicationParameters getApplicationParameters(int argc, char *argv[]);
-
-void login(std::shared_ptr<cpp_ami::Connection> const &ami_conn, ini::IniFile &cfg_ini, bool is_daemon);
-
-void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn);
+#include <yaml-cpp/yaml.h>
 
 // Globals =============================================================================================================
 
 std::unique_ptr<httplib::Server> g_server;
-
-int main(int argc, char *argv[])
-{
-    auto const args = getApplicationParameters(argc, argv);
-
-    ini::IniFile ami_ini;
-    ami_ini.load(args.config_file);
-
-    if (args.is_daemon) {
-        if (daemon(0, 0) == -1) {
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // Create AMI connection
-    auto const ami_hostname = ami_ini["ami"]["host"].as<std::string>();
-    auto const ami_port = ami_ini["ami"]["port"].as<uint16_t>();
-    auto io_conn = std::make_shared<cpp_ami::Connection>(ami_hostname, ami_port);
-
-    login(io_conn, ami_ini, args.is_daemon);
-
-    serviceThread(ami_ini, io_conn);
-
-    // Logout of AMI; wait for the response before terminating
-    cpp_ami::action::Logoff const logoff;
-    auto const reaction = io_conn->invoke(logoff);
-
-    return EXIT_SUCCESS;
-}
 
 /// @brief Handles termination events sent to the application.
 ///
@@ -73,11 +30,102 @@ int main(int argc, char *argv[])
 ///
 /// The application is waiting for the HTTP server to spin down before continuing on. When the application encounters a
 /// termination signal it will tell the HTTP server to stop, allowing the application to continue on and stop.
-void signalHandler(int signum)
+void signalHandler(int signum, [[maybe_unused]] siginfo_t *info, [[maybe_unused]] void *ptr)
 {
-    if (g_server && signum == SIGINT) {
+    if (g_server && signum == SIGTERM) {
+        syslog(LOG_DEBUG, "Stopping server");
         g_server->stop();
     }
+}
+
+// Function declarations ===============================================================================================
+
+ApplicationParameters getApplicationParameters(int argc, char *argv[]);
+
+std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
+                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period,
+                                std::string_view thread_name);
+
+int main(int argc, char *argv[])
+{
+    auto const args = getApplicationParameters(argc, argv);
+
+    // Make sure that the config file exists
+    if (!std::filesystem::exists(args.config_file)) {
+        std::cerr << "Unable to find config file " << args.config_file << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    try {
+        // Load config file
+        auto const config_yaml = loadConfigFile(args.config_file);
+        // auto const config_yaml = YAML::LoadFile(args.config_file);
+
+        // Fork to background if requested
+        if (args.is_daemon) {
+            if (daemon(0, 0) == -1) {
+                std::cerr << "Unable to daemonize" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        setUserGroup(args.user, args.group);
+
+        configureSyslog(config_yaml["syslog"], "lamp_monitor", args.is_daemon);
+
+        syslog(LOG_DEBUG, "Starting application");
+
+        // Create HTTP server
+        std::string http_addr;
+        uint16_t http_port{};
+        std::tie(g_server, http_addr, http_port) = createHTTPServer(config_yaml["http"]);
+
+        // Register SIGTERM handler
+        struct sigaction sa{};
+        memset(&sa, 0, sizeof(struct sigaction));
+        sa.sa_sigaction = signalHandler;
+        sa.sa_flags = SA_SIGINFO;
+        sigemptyset(&sa.sa_mask);
+        if (sigaction(SIGTERM, &sa, nullptr) < 0) {
+            syslog(LOG_ERR, "Unable to register SIGTERM handler");
+            exit(EXIT_FAILURE);
+        }
+
+        // Create AMI connection
+        auto const io_conn = createAMIConnection(config_yaml["ami"]);
+        // Ping AMI server so application doesn't get kicked
+        std::atomic<bool> thread_run_flag{true};
+        std::condition_variable cv;
+        std::chrono::seconds const period{120};
+        auto ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, period, "ping_thread");
+
+        // Create HTTP phonebooks
+        createPhonebooks(config_yaml["phonebooks"], *g_server, io_conn);
+        // Create Asterisk registration event handler; this object maintains the lifetimes of all button plans in use by
+        // the application.
+        auto const phone_register_handler = createRegisterEventHandler(config_yaml, *g_server, io_conn);
+
+        // httplib::Server::listen is a blocking call
+        g_server->listen(http_addr, http_port);
+
+        // Stop and join on ping thread
+        thread_run_flag = false;
+        cv.notify_all();
+        ping_thread.join();
+
+        // Logout of AMI; wait for the response before terminating
+        cpp_ami::action::Logoff const logoff;
+        auto const reaction = io_conn->invoke(logoff);
+    }
+    catch (std::exception const &e) {
+        syslog(LOG_CRIT, "Exception: %s", e.what());
+        exit(EXIT_FAILURE);
+    }
+
+    syslog(LOG_DEBUG, "Stopping application");
+    closelog();
+
+    return EXIT_SUCCESS;
 }
 
 /// @brief Gets application parameters.
@@ -88,8 +136,14 @@ void signalHandler(int signum)
 /// @return Application parameters structure.
 ApplicationParameters getApplicationParameters(int argc, char *argv[])
 {
-    argparse::ArgumentParser parser("lamp_monitor");
-    parser.add_argument("-d", "--daemon").default_value(false).implicit_value(true).nargs(0);
+    argparse::ArgumentParser parser("lamp_monitor", LAMP_MONITOR_VER);
+    parser.add_argument("-d", "--daemon")
+        .help("run application as a daemon")
+        .default_value(false)
+        .implicit_value(true)
+        .nargs(0);
+    parser.add_argument("-u", "--user").help("run as user").default_value("");
+    parser.add_argument("-g", "--group").help("run as group").default_value("");
     parser.add_argument("config_ini").help("Application config file").required();
 
     try {
@@ -100,31 +154,8 @@ ApplicationParameters getApplicationParameters(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    return ApplicationParameters{parser.get<std::string>("config_ini"), parser.get<bool>("--daemon")};
-}
-
-/// @brief Logs the application into the Asterisk server.
-///
-/// @param conn Pointer to Asterisk AMI connection.
-/// @param cfg_ini INI configuration object.
-/// @param is_daemon Boolean flag indicating application is a running in daemon mode.
-void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_ini, bool is_daemon)
-{
-    // Create AMI Login action
-    auto const ami_username = cfg_ini["ami"]["username"].as<std::string>();
-    auto const ami_password = cfg_ini["ami"]["secret"].as<std::string>();
-    cpp_ami::action::Login login(ami_username, ami_password);
-    login["AuthType"] = "plain";
-    login["Events"] = "on";
-    // Send login to AMI
-    auto const reaction = conn->invoke(login);
-    // Confirm login
-    if (!reaction->isSuccess()) {
-        if (!is_daemon) {
-            std::cerr << "Unable to login to AMI";
-        }
-        exit(EXIT_FAILURE);
-    }
+    return ApplicationParameters{parser.get<std::string>("config_ini"), parser.get<std::string>("--user"),
+                                 parser.get<std::string>("--group"), parser.get<bool>("--daemon")};
 }
 
 /// @brief Create a thread that will ping the AMI server.
@@ -133,6 +164,7 @@ void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_i
 /// @param cv Condition variable used to prematurely awaken the thread.
 /// @param run_thread_flag Flag used to stop the thread execution.
 /// @param period Period to sleep between pings.
+/// @param thread_name Thread name that should show up in top.
 ///
 /// @return \c thread object that holds a handle to the newly created thread.
 ///
@@ -140,9 +172,11 @@ void login(std::shared_ptr<cpp_ami::Connection> const &conn, ini::IniFile &cfg_i
 /// order to avoid having the connection to the AMI server closed it is recommended for an application to start a thread
 /// that will periodically send a Ping action to the AMI server. This function creates that thread.
 std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_conn, std::condition_variable &cv,
-                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period)
+                                std::atomic<bool> &run_thread_flag, std::chrono::milliseconds period,
+                                std::string_view thread_name)
 {
     std::thread work_thread([&cv, &run_thread_flag, ami_conn, period, ping = cpp_ami::action::Ping()]() -> void {
+        syslog(LOG_DEBUG, "Starting AMI ping thread");
         do {
             // Send ping to the AMI server, waiting for the result
             auto const r = ami_conn->invoke(ping);
@@ -154,174 +188,7 @@ std::thread createAmiPingThread(std::shared_ptr<cpp_ami::Connection> const &ami_
         } while (run_thread_flag);
     });
 
-    pthread_setname_np(work_thread.native_handle(), "ping_ami");
+    pthread_setname_np(work_thread.native_handle(), thread_name.data());
 
     return work_thread;
-}
-
-/// @brief Creates deskphone cache object.
-///
-/// @param cfg_ini Object containing configuration information.
-///
-/// @return Pointer to deskphone cache object.
-std::shared_ptr<DeskphoneCache> createDeskphoneCache(ini::IniFile &cfg_ini)
-{
-    auto const db_filename = cfg_ini["handset_cache"]["filename"].as<std::string>();
-    auto const db_expiry = cfg_ini["handset_cache"]["expiry"].as<uint32_t>();
-    return std::make_unique<DeskphoneCache>(db_filename, std::chrono::seconds(db_expiry));
-}
-
-/// @brief Creates a phone UI and attaches it to the deskphone.
-///
-/// @param http_server HTTP server that will interact with the deskphone UI.
-/// @param cfg_ini Object containing configuration parameters.
-/// @param deskphone_cache Deskphone cache.
-/// @param deskphone Object that is monitoring Asterisk AMI events for phone registrations.
-void setupEndpointAdapter(std::unique_ptr<httplib::Server> const &http_server, ini::IniFile &cfg_ini,
-                          std::shared_ptr<DeskphoneCache> const &deskphone_cache,
-                          std::shared_ptr<monitor::Deskphone> const &deskphone)
-{
-    // Attach UI adapter to deskphone
-    auto const phone_ui = std::make_shared<xml::yealink::PhoneUI>();
-    deskphone->registerPhoneUI(phone_ui);
-
-    // Bind URI to get current lamp settings
-    auto const blf_state_uri = cfg_ini["http_server"]["blf_state_uri"].as<std::string>();
-    http_server->Get(blf_state_uri,
-                     [deskphone_cache, phone_ui](httplib::Request const &req, httplib::Response &res) -> void {
-                         // Remove requesting deskphone from cache
-                         if (req.has_param("aor") && req.has_param("ip")) {
-                             deskphone_cache->deleteEndpoint(req.get_param_value("aor"), req.get_param_value("ip"));
-                         }
-                         // Return current deskphone state
-                         res.set_content(phone_ui->toString(), "text/xml");
-                     });
-}
-
-/// @brief Creates night button object.
-///
-/// @param lamp_field Button factory.
-/// @param io_conn Pointer to Asterisk AMI connection.
-/// @param http_server Pointer to HTTP server to bind URI's to.
-/// @param cfg_ini INI configuration object.
-std::unique_ptr<monitor::NightButton> createNightButton(std::shared_ptr<button_state::LampField> const &lamp_field,
-                                                        std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                        std::unique_ptr<httplib::Server> const &http_server,
-                                                        ini::IniFile &cfg_ini)
-{
-    // Setup XML browser
-    auto const button_id = cfg_ini["night_button"]["button_id"].as<unsigned int>();
-    auto const device = cfg_ini["night_button"]["device"].as<std::string>();
-    auto const button_state = lamp_field->getButton(button_id, button_state::PhoneButton::Color::Red, false);
-    auto const http_button = std::make_shared<xml::yealink::HTTPNightButton>(button_state, io_conn, device);
-    // Bind URI to HTTP night button interface
-    auto const night_uri = cfg_ini["http_server"]["night_uri"].as<std::string>();
-    http_server->Get(night_uri,
-                     [http_button]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(http_button->pushButton(), "text/xml");
-                     });
-
-    // Hook night button to Asterisk
-    auto const exten = cfg_ini["night_button"]["exten"].as<std::string>();
-    auto const context = cfg_ini["night_button"]["context"].as<std::string>();
-    return std::make_unique<monitor::NightButton>(button_state, io_conn, exten, context, device);
-}
-
-/// @brief Creates park button.
-///
-/// @param lamp_field Button factory.
-/// @param io_conn Pointer to Asterisk AMI connection.
-/// @param http_server Pointer to HTTP server to bind URI's to.
-/// @param cfg_ini INI configuration object.
-std::unique_ptr<monitor::ParkButton> createParkButton(std::shared_ptr<button_state::LampField> const &lamp_field,
-                                                      std::shared_ptr<cpp_ami::Connection> const &io_conn,
-                                                      std::unique_ptr<httplib::Server> const &http_server,
-                                                      ini::IniFile &cfg_ini)
-{
-    // Setup XML browser interface
-    auto const http_url = cfg_ini["http_server"]["url"].as<std::string>();
-    auto const park_info_uri = cfg_ini["http_server"]["park_info_uri"].as<std::string>();
-    auto const parked_call_menu = std::make_shared<xml::yealink::CallParkMenu>(io_conn, http_url + park_info_uri);
-    // Parked call list handler
-    auto const park_list_uri = cfg_ini["http_server"]["park_list_uri"].as<std::string>();
-    http_server->Get(park_list_uri,
-                     [parked_call_menu]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(parked_call_menu->getParkedCallMenu(), "text/xml");
-                     });
-    // Parked call info handler
-    http_server->Get(park_info_uri, [parked_call_menu](httplib::Request const &req, httplib::Response &res) -> void {
-        // Serve parked call details
-        if (req.has_param("selection")) {
-            res.set_content(parked_call_menu->getParkedCallDetails(req.get_param_value("selection")), "text/xml");
-            return;
-        }
-        // Warn of missing parameters
-        static auto const error_xml = parked_call_menu->createMessageXML(true, 5, "Missing Extension Parameter",
-                                                                         "Missing URL parameter '&selection=xxx'.");
-        res.set_content(error_xml, "text/xml");
-    });
-
-    // Hook night button to Asterisk
-    auto const button_id = cfg_ini["park_button"]["button_id"].as<unsigned int>();
-    auto const button_state = lamp_field->getButton(button_id, button_state::PhoneButton::Color::Red, true);
-    return std::make_unique<monitor::ParkButton>(button_state, io_conn);
-}
-
-/// @brief Creates and configures the phonebook service for the application.
-///
-/// @param http_server Pointer to HTTP server to bind URI's to.
-/// @param io_conn Asterisk AMI connection.
-/// @param cfg_ini INI configuration object.
-void configurePhonebookService(std::unique_ptr<httplib::Server> const &http_server,
-                               std::shared_ptr<cpp_ami::Connection> const &io_conn, ini::IniFile &cfg_ini)
-{
-    auto phonebook_adapter = std::make_shared<phonebook::PJSIPWizardAdapter>(io_conn, "local-phone");
-
-    // Setup Yealink phonebook URI
-    auto const phonebook_uri = cfg_ini["http_server"]["phonebook_uri"].as<std::string>();
-    auto const phonebook = std::make_shared<xml::yealink::XMLPhonebook>(phonebook_adapter, std::chrono::minutes(60));
-    http_server->Get(phonebook_uri,
-                     [phonebook]([[maybe_unused]] httplib::Request const &req, httplib::Response &res) -> void {
-                         res.set_content(phonebook->getPhonebookString(), "text/xml");
-                     });
-}
-
-/// @brief Main service thread.
-///
-/// @param cfg_ini Configuration file.
-/// @param io_conn Asterisk AMI connection.
-void serviceThread(ini::IniFile &cfg_ini, std::shared_ptr<cpp_ami::Connection> const &io_conn)
-{
-    // Asterisk will drop AMI connections it hasn't heard from in a while; start an AMI ping thread
-    std::atomic<bool> thread_run_flag{true};
-    std::condition_variable cv;
-    std::thread ami_ping_thread = createAmiPingThread(io_conn, cv, thread_run_flag, std::chrono::milliseconds(2500));
-
-    g_server = std::make_unique<httplib::Server>();
-    signal(SIGINT, signalHandler);
-
-    // Create phonebook service
-    configurePhonebookService(g_server, io_conn, cfg_ini);
-
-    // Setup up application buttons
-    auto const lamp_field = std::make_shared<button_state::LampField>();
-    auto const night_button = createNightButton(lamp_field, io_conn, g_server, cfg_ini);
-    auto const park_button = createParkButton(lamp_field, io_conn, g_server, cfg_ini);
-
-    // Create deskphone connected to Asterisk
-    auto const deskphone_cache = createDeskphoneCache(cfg_ini);
-    auto const deskphone = std::make_shared<monitor::Deskphone>(deskphone_cache, io_conn);
-    // Attach buttons to deskphone
-    lamp_field->registerObserver(deskphone);
-    setupEndpointAdapter(g_server, cfg_ini, deskphone_cache, deskphone);
-
-    // httplib::Server::listen is a blocking call
-    auto const http_addr = cfg_ini["http_server"]["addr"].as<std::string>();
-    auto const http_port = cfg_ini["http_server"]["port"].as<uint16_t>();
-    g_server->listen(http_addr, http_port);
-
-    // Stop ping thread
-    thread_run_flag = false;
-    cv.notify_all();
-    ami_ping_thread.join();
 }

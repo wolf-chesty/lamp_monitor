@@ -1,0 +1,23 @@
+name:
+  _mandatory: true
+  _type: string
+  _doc: phone config name
+type:
+  _mandatory: true
+  _type: string
+  _options: [ "yealink" ]
+  _doc: phone type
+button_plan:
+  _mandatory: true
+  _type: string
+  _doc: button plan name
+provider:
+  _mandatory: true
+  _type: derived
+  _base: provider
+  _doc: phone provider
+http_paths:
+  _mandatory: false
+  _type: derived[]
+  _base: phone-config-http-path
+  _doc: phone HTTP paths

@@ -7,4 +7,6 @@ FetchContent_Declare (cpp-httplib
     GIT_PROGRESS TRUE
 )
 
+set(HTTPLIB_INSTALL OFF)
+
 FetchContent_MakeAvailable (cpp-httplib)

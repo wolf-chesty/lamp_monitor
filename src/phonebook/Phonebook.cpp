@@ -1,0 +1,45 @@
+// Copyright (c) 2026 Christopher L Walker
+// SPDX-License-Identifier: MIT
+
+#include "phonebook/Phonebook.hpp"
+
+#include "phonebook/snom/Phonebook.hpp"
+#include "phonebook/yealink/Phonebook.hpp"
+#include <cassert>
+#include <syslog.h>
+
+using namespace phonebook;
+
+Phonebook::Phonebook(std::shared_ptr<PhonebookProvider> phonebook_provider, std::chrono::minutes expiry)
+    : provider_(std::move(phonebook_provider))
+    , expiry_(std::move(expiry))
+{
+}
+
+std::shared_ptr<Phonebook> Phonebook::create(YAML::Node const &config, std::shared_ptr<PhonebookProvider> const &source)
+{
+    std::chrono::minutes const expiry{std::max(config["ttl"].as<uint32_t>(), uint32_t{120})};
+    if (auto const &type = config["type"].as<std::string>(); type == "snom") {
+        return std::make_shared<phonebook::snom::Phonebook>(source, expiry);
+    }
+    else if (type == "yealink") {
+        return std::make_shared<phonebook::yealink::Phonebook>(source, expiry);
+    }
+
+    assert(false);
+    return nullptr;
+}
+
+std::string Phonebook::getPhonebook()
+{
+    syslog(LOG_DEBUG, "HTTPPhonebook::getPhonebook() : Creating HTTP phonebook");
+
+    std::lock_guard const lock(cached_phonebook_mut_);
+
+    // Phonebook string still valid?
+    if (timestamp_ < clock_t::now()) {
+        cached_phonebook_ = getPhonebook(provider_);
+        timestamp_ = clock_t::now() + expiry_;
+    }
+    return cached_phonebook_;
+}

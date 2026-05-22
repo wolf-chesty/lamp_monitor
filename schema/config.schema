@@ -1,0 +1,86 @@
+syslog:
+  level:
+    _mandatory: false
+    _type: unsigned int
+    _options: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+    _default: 3
+    _doc: syslog logging level
+  console:
+    _mandatory: false
+    _type: bool
+    _default: false
+    _doc: log to the console
+
+http:
+  addr:
+    _mandatory: false
+    _type: string
+    _default: "0.0.0.0"
+    _doc: IP address to listen on
+  port:
+    _mandatory: false
+    _type: unsigned int
+    _default: 80
+    _doc: port to listen on
+  url:
+    _mandatory: true
+    _type: string
+    _doc: URL to the lamp monitor server
+
+ami:
+  host:
+    _mandatory: false
+    _type: string
+    _default: "127.0.0.1"
+    _doc: hostname of Asterisk AMI server
+  port:
+    _mandatory: false
+    _type: unsigned int
+    _default: 5038
+    _doc: port of Asterisk AMI server
+  username:
+    _mandatory: true
+    _type: string
+    _doc: username to log into Asterisk AMI server
+  secret:
+    _mandatory: true
+    _type: string
+    _doc: password to log into Asterisk AMI server
+
+database:
+  filename:
+    _mandatory: true
+    _type: string
+    _doc: path to active deskphone cache
+  expiry:
+    _mandatory: false
+    _type: unsigned int
+    _default: 120
+    _doc: expiry of records in active deskphone cache in minutes
+  http_paths:
+    expire_path:
+      _mandatory: false
+      _type: string
+      _default: ""
+      _doc: HTTP path to manually expire active deskphones from the cache
+
+phonebooks:
+  providers:
+    _mandatory: true
+    _type: derived[]
+    _base: named-provider
+    _doc: phonebook source provider
+  http_paths:
+    _mandatory: true
+    _type: phonebook-http-path[]
+    _doc: phonebook HTTP paths
+
+button_plans:
+  _mandatory: true
+  _type: button-plan[]
+  _doc: button plan
+
+phones:
+  _mandatory: true
+  _type: phone-config[]
+  _doc: phone config

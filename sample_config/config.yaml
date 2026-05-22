@@ -1,0 +1,90 @@
+syslog:
+  level: 3
+  console: true
+
+http:
+  addr: '0.0.0.0'
+  port: 8080
+  url: http://127.0.0.1:8080
+
+ami:
+  host: 127.0.0.1
+  port: 5038
+  username: username
+  secret: secret
+
+database:
+  filename: /tmp/cache.sqlite3
+  expiry: 120
+  http_paths:
+    expire_path: /expire
+
+phonebooks:
+  providers:
+    - name: default
+      type: pjsip_wizard_cfg
+      match: ec == 'local-set'
+      symbol_maps:
+        - symbol: ec
+          key: endpoint/context
+
+  http_paths:
+    - path: /yealink/phonebook
+      provider: default
+      type: yealink
+      ttl: 60
+
+    - path: /snom/phonebook
+      provider: default
+      type: snom
+      ttl: 60
+
+button_plans:
+  - name: yealink-t88w
+    buttons:
+      - id: 1
+        label: Night
+        color: red
+        critical_on: false
+        critical_off: false
+        flash: off
+        type: night_button
+        hint: Custom:night
+
+      - id: 2
+        label: Park
+        color: red
+        critical_on: true
+        critical_off: false
+        flash: fast
+        type: park_button
+        parking_lot: default
+      
+phones:
+  - name: yealink-t88w
+    type: yealink
+    button_plan: yealink-t88w
+
+    provider:
+      type: pjsip_wizard_cfg
+      match: pp == 'yealink' and ec = 'local-set'
+      symbol_maps:
+        - symbol: ec
+          key: endpoint/context
+
+        - symbol: pp
+          key: phoneprov/PROFILE
+
+    http_paths:
+      - type: http_state
+        path: /yealink/blf_state
+
+      - type: http_night
+        button_id: 1
+        path: /yealink/reset_night
+
+      - type: http_park
+        button_id: 2
+        park_list_path: /yealink/parked_call_list
+        park_info_path: /yealink/parked_call_info
+

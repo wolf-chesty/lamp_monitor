@@ -1,0 +1,124 @@
+// Copyright (c) 2026 Christopher L Walker
+// SPDX-License-Identifier: MIT
+
+#include "button_state/ButtonPlan.hpp"
+
+#include <cassert>
+#include <execution>
+#include <syslog.h>
+
+using namespace button_state;
+
+ButtonPlan::ButtonPlan(std::string name, std::shared_ptr<cpp_ami::Connection> io_conn)
+    : name_(std::move(name))
+    , io_conn_(std::move(io_conn))
+{
+}
+
+std::shared_ptr<ButtonPlan> ButtonPlan::create(YAML::Node const &config,
+                                               std::shared_ptr<cpp_ami::Connection> const &io_conn)
+{
+    auto const &name = config["name"].as<std::string>();
+    auto const button_plan = std::make_shared<ButtonPlan>(name, io_conn);
+
+    for (auto const &button_cfg : config["buttons"]) {
+        auto const button = PhoneButton::create(button_cfg, button_plan);
+        assert(button);
+        button_plan->addButton(button->getButtonID(), button);
+    }
+
+    return button_plan;
+}
+
+std::string const &ButtonPlan::getName() const
+{
+    return name_;
+}
+
+void ButtonPlan::removeButton(uint16_t const button_id)
+{
+    std::lock_guard const lock(buttons_mut_);
+    buttons_.erase(button_id);
+}
+
+std::vector<std::shared_ptr<PhoneButton>> ButtonPlan::getButtons()
+{
+    std::shared_lock const lock(buttons_mut_);
+    std::vector<std::shared_ptr<PhoneButton>> buttons;
+    std::ranges::transform(buttons_.begin(), buttons_.end(), std::back_inserter(buttons),
+                           [](auto const &itr) -> std::shared_ptr<PhoneButton> { return itr.second; });
+    return buttons;
+}
+
+std::shared_ptr<PhoneButton> ButtonPlan::getButton(uint16_t const button_id)
+{
+    std::shared_lock const lock(buttons_mut_);
+    auto const itr = buttons_.find(button_id);
+    return itr != buttons_.end() ? itr->second : nullptr;
+}
+
+void ButtonPlan::invalidate([[maybe_unused]] uint16_t const button_id)
+{
+    syslog(LOG_DEBUG, "ButtonPlan::invalidate() : Button state change for button plan %s", name_.c_str());
+
+    std::shared_lock const lock(phone_uis_mut_);
+    std::for_each(std::execution::par, phone_uis_.begin(), phone_uis_.end(),
+                  [this, buttons = getButtons()](auto const &ui) -> void {
+                      // Update the UI state
+                      ui->update(buttons);
+                      // Publish the UI state to the physical deskphones
+                      cpp_ami::action::PJSIPNotify action;
+                      ui->initialize(action);
+                      for (auto const &aor : ui->getAoRs()) {
+                          action["Endpoint"] = aor;
+                          io_conn_->asyncInvoke(action);
+                      }
+                  });
+}
+
+bool ButtonPlan::registerUI(std::shared_ptr<bridge::PhoneUI> const &ui)
+{
+    std::lock_guard const lock(phone_uis_mut_);
+    auto const &[itr, success] = phone_uis_.emplace(ui);
+    if (success) {
+        ui->update(getButtons());
+    }
+    return success;
+}
+
+std::vector<std::shared_ptr<bridge::PhoneUI>> ButtonPlan::getPhoneUIs(std::string const &aor)
+{
+    std::vector<std::shared_ptr<bridge::PhoneUI>> phone_uis;
+    std::lock_guard const lock(phone_uis_mut_);
+    for (auto const &phone_ui : phone_uis_) {
+        if (phone_ui->hasAoR(aor)) {
+            phone_uis.emplace_back(phone_ui);
+        }
+    }
+    return phone_uis;
+}
+
+bool ButtonPlan::addButton(uint16_t const button_id, std::shared_ptr<PhoneButton> const &button)
+{
+    std::lock_guard const lock(buttons_mut_);
+    auto const [_, success] = buttons_.emplace(button_id, button);
+    if (!success) {
+        syslog(LOG_WARNING, "Unable to add button %ud to plan '%s'", button_id, name_.c_str());
+        assert(success);
+    }
+    return success;
+}
+
+bool ButtonPlan::addEventHandler(uint16_t id, std::shared_ptr<asterisk::EventHandler> const &event_handler)
+{
+    std::lock_guard const lock(event_handlers_mut_);
+    auto const [_, success] = event_handlers_.emplace(id, event_handler);
+    return success;
+}
+
+std::shared_ptr<asterisk::EventHandler> ButtonPlan::getEventHandler(uint16_t const id)
+{
+    std::shared_lock const lock(event_handlers_mut_);
+    auto const &itr = event_handlers_.find(id);
+    return itr != event_handlers_.end() ? itr->second : nullptr;
+}
