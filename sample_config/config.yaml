@@ -1,5 +1,5 @@
 syslog:
-  level: 3
+  level: ERR
   console: true
 
 http:
