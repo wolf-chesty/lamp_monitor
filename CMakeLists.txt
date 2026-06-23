@@ -1,20 +1,9 @@
-cmake_minimum_required(VERSION 3.12)
-cmake_policy(VERSION 3.12)
-
-set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.21)
+cmake_policy(VERSION 3.21)
 
 project(lamp_monitor VERSION 0.1.0.0 LANGUAGES CXX C)
 
 include(GNUInstallDirs)
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Options
-# ----------------------------------------------------------------------------------------------------------------------
-option(LAMP_MONITOR_COVERAGE "Enable GCC Coverage" OFF)
-option(LAMP_MONITOR_PERF "Set GCC perf flags" OFF)
-option(LAMP_MONITOR_SANITIZE_ADDRESS "Enable AddressSanitizer (ASan) for memory error detection tests." OFF)
-option(LAMP_MONITOR_SANITIZE_THREAD "Enable ThreadSanitizer (TSan) for detecting thread-related issues." OFF)
-option(LAMP_MONITOR_UNIT_TESTS "Build unit tests" ON)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Project dependencies
@@ -33,20 +22,6 @@ include(third_party/cpp-httplib.cmake)
 include(third_party/dbpool.cmake)
 include(third_party/exprtk.cmake)
 
-if (LAMP_MONITOR_COVERAGE)
-    set(CPPAMI_COVERAGE ON)
-    set(DBPOOL_COVERAGE ON)
-elseif (LAMP_MONITOR_PERF)
-    set(CPPAMI_PERF ON)
-    set(DBPOOL_PERF ON)
-elseif (LAMP_MONITOR_SANITIZE_ADDRESS)
-    set(CPPAMI_SANITIZE_ADDRESS ON)
-    set(DBPOOL_SANITIZE_ADDRESS ON)
-elseif (LAMP_MONITOR_SANITIZE_THREAD)
-    set(CPPAMI_SANITIZE_THREAD ON)
-    set(DBPOOL_SANITIZE_THREAD ON)
-endif ()
-
 execute_process (
     COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -59,7 +34,7 @@ execute_process (
 # ----------------------------------------------------------------------------------------------------------------------
 add_executable(lamp_monitor "")
 
-set(CMAKE_CXX_STANDARD 20)
+target_compile_features(lamp_monitor PRIVATE cxx_std_20)
 
 if(NOT DEFINED LAMP_MONITOR_SCHEMA_DIR)
     set(LAMP_MONITOR_SCHEMA_DIR ${PROJECT_SOURCE_DIR}/schema)
@@ -72,13 +47,13 @@ configure_file(${PROJECT_SOURCE_DIR}/include/lamp_defs.hpp.in ${CMAKE_CURRENT_BI
 target_compile_options (lamp_monitor PRIVATE -fPIC -Wall -Wextra -Wshadow -pedantic -pedantic-errors)
 
 target_include_directories(lamp_monitor
-    PUBLIC
+PUBLIC
     include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
 target_link_libraries(lamp_monitor
-    PUBLIC
+PUBLIC
     anl
     argparse
     c++ami
@@ -91,7 +66,7 @@ target_link_libraries(lamp_monitor
 )
 
 target_sources(lamp_monitor
-    PRIVATE
+PRIVATE
     src/asterisk/config/PjsipWizardConfig.cpp
     src/asterisk/EventHandler.cpp
     src/asterisk/RegisterEventHandler.cpp

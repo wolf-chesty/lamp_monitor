@@ -1,0 +1,85 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "base-preset",
+            "displayName": "Custom configure preset",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "CXX_FLAGS": "-fPIC -Wall -Wextra -Wshadow -pedantic -pedantic-errors",
+                "EXE_LINKER_FLAGS": ""
+            }
+        },
+        {
+            "name": "Debug",
+            "displayName": "Debug",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS}"
+            }
+        },
+        {
+            "name": "Release",
+            "displayName": "Release",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS}"
+            }
+        },
+        {
+            "name": "Coverage",
+            "displayName": "Coverage",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS} -O0 --coverage -g",
+                "CMAKE_EXE_LINKER_FLAGS_INIT": "$env{EXE_LINKER_FLAGS} --coverage"
+            }
+        },
+        {
+            "name": "perf",
+            "displayName": "perf",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS} -O2 -fno-omit-frame-pointer -g",
+                "CMAKE_EXE_LINKER_FLAGS_INIT": "$env{EXE_LINKER_FLAGS} -fno-omit-frame-pointer -g"
+            }
+        },
+        {
+            "name": "ASan",
+            "displayName": "ASan",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer -g",
+                "CMAKE_EXE_LINKER_FLAGS_INIT": "$env{EXE_LINKER_FLAGS} -fsanitize=address,undefined"
+            }
+        },
+        {
+            "name": "TSan",
+            "displayName": "TSan",
+            "inherits": "base-preset",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_INIT": "$env{CXX_FLAGS} -fsanitize=thread -fno-omit-frame-pointer -g",
+                "CMAKE_EXE_LINKER_FLAGS_INIT": "$env{EXE_LINKER_FLAGS} -fsanitize=thread"
+            }
+        },
+        {
+            "name": "Install",
+            "displayName": "Install",
+            "inherits": "base-preset",
+            "cacheVariables" : {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CSS_FLAGS_INITS":"$env{CXX_FLAGS}",
+                "LAMP_MONITOR_SCHEMA_DIR": "/etc"
+            }
+        }
+    ]
+}

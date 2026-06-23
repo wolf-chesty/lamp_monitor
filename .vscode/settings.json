@@ -1,0 +1,4 @@
+{
+    "cmake.ctest.testExplorerIntegrationEnabled": true,
+    "editor.formatOnSave": true
+}
